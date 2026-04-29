@@ -5,8 +5,8 @@ import {
   useListTickets,
   useListSites,
 } from "@workspace/api-client-react";
-import { PieChart, Pie, Cell } from "recharts";
-import SatelliteMap from "@/components/SatelliteMap";
+import Map3D from "@/components/Map3D";
+import GaugeSvg from "@/components/Gauge";
 
 // ─── STC brand palette ────────────────────────────────────────────────────────
 const STC_PURPLE = "#6B1FA2";
@@ -26,66 +26,8 @@ function availability(operational: number, total: number) {
   return Math.round((operational / total) * 10000) / 100;
 }
 
-// ─── Semi-circular gauge ──────────────────────────────────────────────────────
 function Gauge({ value, label, size = 90 }: { value: number; label: string; size?: number }) {
-  const pct = Math.min(100, Math.max(0, value));
-  const needleAngle = -90 + pct * 1.8; // -90 = leftmost, +90 = rightmost
-  const r = size * 0.42;
-  const cx = size / 2;
-  const cy = size * 0.6;
-  const rad = (deg: number) => (deg * Math.PI) / 180;
-  const nx = cx + r * Math.cos(rad(needleAngle));
-  const ny = cy + r * Math.sin(rad(needleAngle));
-
-  const gaugeData = [
-    { value: pct, color: pct > 95 ? STC_GREEN : pct > 80 ? STC_ORANGE : STC_RED },
-    { value: 100 - pct, color: STC_GREY },
-  ];
-
-  return (
-    <div className="flex flex-col items-center" style={{ width: size }}>
-      <div style={{ position: "relative", width: size, height: size * 0.65 }}>
-        <PieChart width={size} height={size}>
-          <Pie
-            data={gaugeData}
-            cx={cx}
-            cy={cy}
-            startAngle={180}
-            endAngle={0}
-            innerRadius={r * 0.68}
-            outerRadius={r}
-            dataKey="value"
-            stroke="none"
-          >
-            {gaugeData.map((entry, i) => (
-              <Cell key={i} fill={entry.color} />
-            ))}
-          </Pie>
-        </PieChart>
-        {/* Needle */}
-        <svg
-          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }}
-          width={size}
-          height={size}
-        >
-          <line
-            x1={cx}
-            y1={cy}
-            x2={nx}
-            y2={ny}
-            stroke="#333"
-            strokeWidth={1.5}
-            strokeLinecap="round"
-          />
-          <circle cx={cx} cy={cy} r={3} fill="#444" />
-        </svg>
-      </div>
-      <div style={{ fontSize: 12, fontWeight: 700, color: pct > 95 ? STC_GREEN : STC_ORANGE, marginTop: -12 }}>
-        {pct.toFixed(2)}%
-      </div>
-      <div style={{ fontSize: 9, color: "#555", textAlign: "center", lineHeight: 1.2 }}>{label}</div>
-    </div>
-  );
+  return <GaugeSvg value={value} label={label} size={size} />;
 }
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
@@ -585,7 +527,7 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <SatelliteMap sites={mapSites} />
+            <Map3D sites={mapSites} areaFilter={areaFilter} />
           </div>
 
           {/* Site type count column */}
