@@ -180,10 +180,26 @@ function addMarkers(sites: MapSite[], map: any, maplibregl: any, markersRef: any
           ? STC_ORANGE
           : STC_RED;
 
+      // Outer wrapper: fixed 28×28 transparent hit-area — never resizes so the
+      // cursor can't escape it and trigger the mouseenter/leave flicker loop.
       const el = document.createElement("div");
-      el.style.cssText = `width:12px;height:12px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 1px 5px rgba(0,0,0,0.6);cursor:pointer;transition:transform 0.15s`;
-      el.addEventListener("mouseenter", () => (el.style.transform = "scale(1.7)"));
-      el.addEventListener("mouseleave", () => (el.style.transform = "scale(1)"));
+      el.style.cssText = `
+        width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+        cursor:pointer;position:relative;
+      `;
+
+      // Inner visual dot — this is what actually scales on hover.
+      const dot = document.createElement("div");
+      dot.style.cssText = `
+        width:12px;height:12px;border-radius:50%;
+        background:${color};border:2px solid white;
+        box-shadow:0 1px 5px rgba(0,0,0,0.6);
+        transition:transform 0.15s ease;pointer-events:none;
+      `;
+      el.appendChild(dot);
+
+      el.addEventListener("mouseenter", () => { dot.style.transform = "scale(1.7)"; });
+      el.addEventListener("mouseleave", () => { dot.style.transform = "scale(1)"; });
 
       const popup = new maplibregl.Popup({ offset: 10, closeButton: false }).setHTML(
         `<div style="font-size:11px;font-family:system-ui"><strong>${site.name}</strong><br/>Zone: ${site.zone}<br/>Status: <span style="color:${color};font-weight:700">${site.status.toUpperCase()}</span></div>`
