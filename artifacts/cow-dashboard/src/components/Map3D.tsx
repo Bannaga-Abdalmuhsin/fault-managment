@@ -218,7 +218,7 @@ function addMarkers(sites: MapSite[], map: any, maplibregl: any, markersRef: any
 function LeafletMap({ sites, areaFilter }: Map3DProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.CircleMarker[]>([]);
+  const markersRef = useRef<L.Marker[]>([]);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
@@ -270,21 +270,28 @@ function LeafletMap({ sites, areaFilter }: Map3DProps) {
             ? STC_ORANGE
             : STC_RED;
 
-        const marker = L.circleMarker([site.latitude!, site.longitude!], {
-          radius: 6,
-          fillColor: color,
-          color: "white",
-          weight: 1.5,
-          fillOpacity: 0.9,
+        // Use DivIcon with an SVG circle — anchored to the exact coordinate
+        // at every zoom level (unlike CircleMarker which drifts in pixel space).
+        const icon = L.divIcon({
+          className: "",
+          html: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+            <circle cx="10" cy="10" r="7" fill="${color}" stroke="white" stroke-width="2"
+              style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55))" />
+          </svg>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10],
+          tooltipAnchor: [0, -12],
         });
 
+        const marker = L.marker([site.latitude!, site.longitude!], { icon });
+
         marker.bindTooltip(
-          `<strong>${site.name}</strong><br/>Zone: ${site.zone}<br/>Status: ${site.status.toUpperCase()}`,
-          { direction: "top", offset: [0, -8] }
+          `<strong>${site.name}</strong><br/>Zone: ${site.zone}<br/>Status: <span style="color:${color};font-weight:700">${site.status.toUpperCase()}</span>`,
+          { direction: "top", offset: [0, -4] }
         );
 
         marker.addTo(map);
-        markersRef.current.push(marker);
+        markersRef.current.push(marker as any);
       });
   }, [sites]);
 
