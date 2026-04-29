@@ -3,13 +3,19 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: COW Sites Hajj Monitoring API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: sites
+    description: COW site operations
+  - name: tickets
+    description: Outage ticket operations
+  - name: dashboard
+    description: Dashboard summary operations
 paths:
   /healthz:
     get:
@@ -24,6 +30,252 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /sites:
+    get:
+      operationId: listSites
+      tags: [sites]
+      summary: List all COW sites
+      responses:
+        "200":
+          description: List of COW sites
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Site"
+    post:
+      operationId: createSite
+      tags: [sites]
+      summary: Create a new COW site
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSiteBody"
+      responses:
+        "201":
+          description: Site created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+
+  /sites/{id}:
+    get:
+      operationId: getSite
+      tags: [sites]
+      summary: Get a COW site by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: COW site details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+        "404":
+          description: Site not found
+    patch:
+      operationId: updateSite
+      tags: [sites]
+      summary: Update a COW site
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSiteBody"
+      responses:
+        "200":
+          description: Updated site
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+
+  /tickets:
+    get:
+      operationId: listTickets
+      tags: [tickets]
+      summary: List all outage tickets
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: integer
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [power, telecom]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, resolved, closed]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [critical, high, medium, low]
+      responses:
+        "200":
+          description: List of tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+    post:
+      operationId: createTicket
+      tags: [tickets]
+      summary: Create a new outage ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTicketBody"
+      responses:
+        "201":
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /tickets/{id}:
+    get:
+      operationId: getTicket
+      tags: [tickets]
+      summary: Get a ticket by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Ticket details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+        "404":
+          description: Ticket not found
+    patch:
+      operationId: updateTicket
+      tags: [tickets]
+      summary: Update a ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTicketBody"
+      responses:
+        "200":
+          description: Updated ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard KPI summary
+      responses:
+        "200":
+          description: Dashboard summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/outages-by-day:
+    get:
+      operationId: getOutagesByDay
+      tags: [dashboard]
+      summary: Get outage ticket counts grouped by day
+      responses:
+        "200":
+          description: Outages by day
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OutagesByDay"
+
+  /dashboard/outages-by-type:
+    get:
+      operationId: getOutagesByType
+      tags: [dashboard]
+      summary: Get outage counts by type (power vs telecom)
+      responses:
+        "200":
+          description: Outages by type
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OutagesByType"
+
+  /dashboard/site-status:
+    get:
+      operationId: getSiteStatus
+      tags: [dashboard]
+      summary: Get status breakdown of all COW sites
+      responses:
+        "200":
+          description: Site status overview
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SiteStatusSummary"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent ticket activity feed
+      responses:
+        "200":
+          description: Recent ticket updates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RecentActivity"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +286,289 @@ components:
       required:
         - status
 
+    Site:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        location:
+          type: string
+        zone:
+          type: string
+        status:
+          type: string
+          enum: [operational, degraded, offline]
+        latitude:
+          type: number
+        longitude:
+          type: number
+        deployedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - location
+        - zone
+        - status
+        - createdAt
+        - updatedAt
+
+    CreateSiteBody:
+      type: object
+      properties:
+        name:
+          type: string
+        location:
+          type: string
+        zone:
+          type: string
+        status:
+          type: string
+          enum: [operational, degraded, offline]
+        latitude:
+          type: number
+        longitude:
+          type: number
+        deployedAt:
+          type: string
+          format: date-time
+      required:
+        - name
+        - location
+        - zone
+
+    UpdateSiteBody:
+      type: object
+      properties:
+        name:
+          type: string
+        location:
+          type: string
+        zone:
+          type: string
+        status:
+          type: string
+          enum: [operational, degraded, offline]
+        latitude:
+          type: number
+        longitude:
+          type: number
+
+    Ticket:
+      type: object
+      properties:
+        id:
+          type: integer
+        siteId:
+          type: integer
+        siteName:
+          type: string
+        type:
+          type: string
+          enum: [power, telecom]
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        priority:
+          type: string
+          enum: [critical, high, medium, low]
+        title:
+          type: string
+        description:
+          type: string
+        assignedTo:
+          type: string
+        resolvedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - siteId
+        - siteName
+        - type
+        - status
+        - priority
+        - title
+        - createdAt
+        - updatedAt
+
+    CreateTicketBody:
+      type: object
+      properties:
+        siteId:
+          type: integer
+        type:
+          type: string
+          enum: [power, telecom]
+        priority:
+          type: string
+          enum: [critical, high, medium, low]
+        title:
+          type: string
+        description:
+          type: string
+        assignedTo:
+          type: string
+      required:
+        - siteId
+        - type
+        - priority
+        - title
+
+    UpdateTicketBody:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        priority:
+          type: string
+          enum: [critical, high, medium, low]
+        assignedTo:
+          type: string
+        description:
+          type: string
+        resolvedAt:
+          type: string
+          format: date-time
+
+    DashboardSummary:
+      type: object
+      properties:
+        totalSites:
+          type: integer
+        operationalSites:
+          type: integer
+        degradedSites:
+          type: integer
+        offlineSites:
+          type: integer
+        totalTickets:
+          type: integer
+        openTickets:
+          type: integer
+        inProgressTickets:
+          type: integer
+        resolvedTickets:
+          type: integer
+        criticalTickets:
+          type: integer
+        powerOutageTickets:
+          type: integer
+        telecomOutageTickets:
+          type: integer
+        avgResolutionHours:
+          type: number
+      required:
+        - totalSites
+        - operationalSites
+        - degradedSites
+        - offlineSites
+        - totalTickets
+        - openTickets
+        - inProgressTickets
+        - resolvedTickets
+        - criticalTickets
+        - powerOutageTickets
+        - telecomOutageTickets
+        - avgResolutionHours
+
+    OutagesByDay:
+      type: object
+      properties:
+        date:
+          type: string
+        powerOutages:
+          type: integer
+        telecomOutages:
+          type: integer
+      required:
+        - date
+        - powerOutages
+        - telecomOutages
+
+    OutagesByType:
+      type: object
+      properties:
+        type:
+          type: string
+        count:
+          type: integer
+        percentage:
+          type: number
+      required:
+        - type
+        - count
+        - percentage
+
+    SiteStatusSummary:
+      type: object
+      properties:
+        siteId:
+          type: integer
+        siteName:
+          type: string
+        zone:
+          type: string
+        status:
+          type: string
+          enum: [operational, degraded, offline]
+        openTickets:
+          type: integer
+        lastIncident:
+          type: string
+          format: date-time
+      required:
+        - siteId
+        - siteName
+        - zone
+        - status
+        - openTickets
+
+    RecentActivity:
+      type: object
+      properties:
+        ticketId:
+          type: integer
+        ticketTitle:
+          type: string
+        siteName:
+          type: string
+        type:
+          type: string
+          enum: [power, telecom]
+        status:
+          type: string
+          enum: [open, in_progress, resolved, closed]
+        priority:
+          type: string
+          enum: [critical, high, medium, low]
+        timestamp:
+          type: string
+          format: date-time
+        action:
+          type: string
+      required:
+        - ticketId
+        - ticketTitle
+        - siteName
+        - type
+        - status
+        - priority
+        - timestamp
+        - action
