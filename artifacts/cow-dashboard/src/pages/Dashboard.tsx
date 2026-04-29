@@ -234,78 +234,54 @@ export default function Dashboard() {
       {/* ══ HEADER ══════════════════════════════════════════════════════════ */}
       <div
         style={{
-          background: "white",
-          borderBottom: `2px solid ${STC_PURPLE}`,
+          background: STC_PURPLE,
           padding: "6px 14px",
           display: "flex",
           alignItems: "center",
           gap: 12,
           flexShrink: 0,
-          height: 52,
+          height: 56,
         }}
       >
         {/* STC Logo */}
-        <div
-          style={{
-            background: STC_PURPLE,
-            color: "white",
-            fontWeight: 900,
-            fontSize: 18,
-            padding: "2px 10px",
-            borderRadius: 3,
-            letterSpacing: 1,
-            fontStyle: "italic",
-          }}
-        >
-          stc
-        </div>
+        <img
+          src="/stc-logo.png"
+          alt="STC"
+          style={{ height: 36, width: "auto", objectFit: "contain" }}
+        />
 
         {/* Date box */}
         <div
           style={{
-            border: `1px solid ${STC_GREY}`,
+            border: "1px solid rgba(255,255,255,0.4)",
             borderRadius: 3,
             padding: "2px 8px",
             fontSize: 9,
             textAlign: "center",
-            color: "#555",
+            color: "rgba(255,255,255,0.85)",
+            flexShrink: 0,
           }}
         >
           <div style={{ fontWeight: 600 }}>{dateStr}</div>
           <div>Last Refresh: {lastRefresh}</div>
         </div>
 
-        {/* Title */}
+        {/* Title — centred */}
         <div style={{ flex: 1, textAlign: "center" }}>
-          <div style={{ fontSize: 17, fontWeight: 700, color: STC_PURPLE_DARK, letterSpacing: 0.5 }}>
+          <div style={{ fontSize: 22, fontWeight: 800, color: "white", letterSpacing: 0.5 }}>
             COW HAJJ 1447 Interactive Status
           </div>
-          <div style={{ fontSize: 9, color: "#888" }}>Real-time monitoring of all deployed COW sites</div>
+          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.7)" }}>
+            Real-time monitoring of all deployed COW sites
+          </div>
         </div>
 
-        {/* KPIs inline */}
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <KpiCard label="No. of 2G Down Sites" value={offlineSites > 0 ? Math.ceil(offlineSites * 0.2) : 0} accent={STC_PURPLE} />
-          <KpiCard label="No. of 4G Down Sites" value={offlineSites > 0 ? Math.ceil(offlineSites * 0.5) : 0} accent={STC_PURPLE} />
-          <KpiCard label="No. of 5G Down Sites" value={offlineSites > 0 ? Math.floor(offlineSites * 0.3) : 0} accent={STC_PURPLE} />
-          <KpiCard label="# Total Outages Tickets" value={openTickets.length} accent={STC_RED} />
-          <KpiCard label="# Total Power Tickets" value={powerTickets.length} accent={STC_ORANGE} />
-        </div>
-
-        {/* ACES logo */}
-        <div
-          style={{
-            border: `2px solid ${STC_PURPLE}`,
-            color: STC_PURPLE,
-            fontWeight: 900,
-            fontSize: 13,
-            padding: "2px 8px",
-            borderRadius: 3,
-            letterSpacing: 1,
-          }}
-        >
-          /ACES
-        </div>
+        {/* ACES Logo */}
+        <img
+          src="/aces-logo.png"
+          alt="ACES Managed Services"
+          style={{ height: 40, width: "auto", objectFit: "contain" }}
+        />
       </div>
 
       {/* ══ MAIN BODY ════════════════════════════════════════════════════════ */}
@@ -610,6 +586,33 @@ export default function Dashboard() {
             <AreaBar label="Arafat" value={arafat?.op ?? 0} max={arafat?.total ?? 30} downSites={arafat?.down ?? 0} />
             <AreaBar label="Muzdalifah" value={muzdalifah?.op ?? 0} max={muzdalifah?.total ?? 30} downSites={muzdalifah?.down ?? 0} />
             <AreaBar label="Mina" value={mina?.op ?? 0} max={mina?.total ?? 15} downSites={mina?.down ?? 0} />
+          </div>
+
+          {/* KPI Cards below gauge */}
+          <div style={{ width: "100%", borderTop: `1px solid ${STC_GREY}`, paddingTop: 6, display: "flex", flexDirection: "column", gap: 4 }}>
+            {[
+              { label: "No. of 2G Down Sites", value: offlineSites > 0 ? Math.ceil(offlineSites * 0.2) : 0, accent: STC_PURPLE },
+              { label: "No. of 4G Down Sites", value: offlineSites > 0 ? Math.ceil(offlineSites * 0.5) : 0, accent: STC_PURPLE },
+              { label: "No. of 5G Down Sites", value: offlineSites > 0 ? Math.floor(offlineSites * 0.3) : 0, accent: STC_PURPLE },
+              { label: "# Total Outages Tickets", value: openTickets.length, accent: STC_RED },
+              { label: "# Total Power Tickets", value: powerTickets.length, accent: STC_ORANGE },
+            ].map(({ label, value, accent }) => (
+              <div
+                key={label}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "#FAF7FF",
+                  borderRadius: 3,
+                  padding: "3px 7px",
+                  border: `1px solid ${STC_GREY}`,
+                }}
+              >
+                <span style={{ fontSize: 8.5, color: "#555", fontWeight: 500 }}>{label}</span>
+                <span style={{ fontSize: 14, fontWeight: 800, color: accent, lineHeight: 1 }}>{value}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
