@@ -56,10 +56,10 @@ function SectionHeader({ title }: { title: string }) {
       style={{
         background: STC_PURPLE,
         color: "white",
-        fontSize: 9,
+        fontSize: 11,
         fontWeight: 700,
         textAlign: "center",
-        padding: "3px 6px",
+        padding: "4px 6px",
         borderRadius: 2,
         letterSpacing: "0.04em",
         textTransform: "uppercase",
@@ -75,18 +75,18 @@ function AreaBar({ label, value, max = 80, downSites }: { label: string; value: 
   const pct = Math.min((value / max) * 100, 100);
   return (
     <div style={{ textAlign: "center" }}>
-      <div style={{ fontSize: 9, fontWeight: 600, color: STC_PURPLE_DARK, marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 11, fontWeight: 600, color: STC_PURPLE_DARK, marginBottom: 2 }}>{label}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 2, justifyContent: "center" }}>
-        <span style={{ fontSize: 8, color: "#888", width: 14 }}>0</span>
+        <span style={{ fontSize: 10, color: "#888", width: 14 }}>0</span>
         <div style={{ flex: 1, height: 10, background: STC_GREY, borderRadius: 3, overflow: "hidden", maxWidth: 60 }}>
           <div style={{ width: `${pct}%`, height: "100%", background: STC_GREEN, borderRadius: 3 }} />
         </div>
-        <span style={{ fontSize: 8, color: "#888", width: 16 }}>{max}</span>
+        <span style={{ fontSize: 10, color: "#888", width: 16 }}>{max}</span>
       </div>
-      <div style={{ fontSize: 8, color: "#888", marginTop: 1 }}>{value} operational</div>
+      <div style={{ fontSize: 10, color: "#888", marginTop: 1 }}>{value} operational</div>
       <div
         style={{
-          fontSize: 13,
+          fontSize: 16,
           fontWeight: 700,
           color: downSites > 0 ? STC_RED : STC_GREEN,
           marginTop: 2,
@@ -94,7 +94,7 @@ function AreaBar({ label, value, max = 80, downSites }: { label: string; value: 
       >
         {downSites}
       </div>
-      <div style={{ fontSize: 8, color: "#888" }}>{label} Down Sites</div>
+      <div style={{ fontSize: 10, color: "#888" }}>{label} Down Sites</div>
     </div>
   );
 }
@@ -107,35 +107,35 @@ function TicketRow({ ticket, cols }: { ticket: any; cols: string[] }) {
     ticket.priority === "critical" ? STC_RED : ticket.priority === "high" ? STC_ORANGE : "#888";
 
   return (
-    <tr style={{ borderBottom: `1px solid ${STC_GREY}`, fontSize: 9 }}>
-      <td style={{ padding: "2px 4px", whiteSpace: "nowrap" }}>{ticket.siteName}</td>
-      <td style={{ padding: "2px 4px", color: ticket.type === "power" ? STC_ORANGE : STC_PURPLE }}>
+    <tr style={{ borderBottom: `1px solid ${STC_GREY}`, fontSize: 11 }}>
+      <td style={{ padding: "3px 5px", whiteSpace: "nowrap" }}>{ticket.siteName}</td>
+      <td style={{ padding: "3px 5px", color: ticket.type === "power" ? STC_ORANGE : STC_PURPLE }}>
         {ticket.type}
       </td>
-      <td style={{ padding: "2px 4px", whiteSpace: "nowrap", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis" }}>
+      <td style={{ padding: "3px 5px", whiteSpace: "nowrap", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>
         {ticket.title}
       </td>
-      <td style={{ padding: "2px 4px" }}>
+      <td style={{ padding: "3px 5px" }}>
         <span
           style={{
             background: statusColor,
             color: "white",
             borderRadius: 2,
-            padding: "1px 4px",
-            fontSize: 8,
+            padding: "1px 5px",
+            fontSize: 10,
             textTransform: "uppercase",
           }}
         >
           {ticket.status}
         </span>
       </td>
-      <td style={{ padding: "2px 4px" }}>
-        <span style={{ color: priorityColor, fontWeight: 600, fontSize: 8 }}>{ticket.priority}</span>
+      <td style={{ padding: "3px 5px" }}>
+        <span style={{ color: priorityColor, fontWeight: 600, fontSize: 10 }}>{ticket.priority}</span>
       </td>
-      <td style={{ padding: "2px 4px", color: "#888" }}>
+      <td style={{ padding: "3px 5px", color: "#888" }}>
         {new Date(ticket.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
       </td>
-      <td style={{ padding: "2px 4px", color: "#888" }}>{ticket.assignedTo ?? "—"}</td>
+      <td style={{ padding: "3px 5px", color: "#888" }}>{ticket.assignedTo ?? "—"}</td>
     </tr>
   );
 }
@@ -317,10 +317,10 @@ export default function Dashboard() {
             onChange={(e) => setCowIdFilter(e.target.value)}
             style={{
               width: "100%",
-              fontSize: 9,
+              fontSize: 11,
               border: `1px solid ${STC_GREY}`,
               borderRadius: 3,
-              padding: "3px 6px",
+              padding: "4px 6px",
               color: "#333",
               cursor: "pointer",
             }}
@@ -342,8 +342,8 @@ export default function Dashboard() {
                 onClick={() => setStatusFilter(s)}
                 style={{
                   flex: 1,
-                  padding: "3px 0",
-                  fontSize: 9,
+                  padding: "4px 0",
+                  fontSize: 11,
                   fontWeight: 600,
                   borderRadius: 3,
                   border: "none",
@@ -366,8 +366,8 @@ export default function Dashboard() {
                 key={a}
                 onClick={() => setAreaFilter(areaMap[a])}
                 style={{
-                  padding: "2px 6px",
-                  fontSize: 8,
+                  padding: "3px 8px",
+                  fontSize: 10,
                   fontWeight: 600,
                   borderRadius: 3,
                   border: `1px solid ${STC_PURPLE}`,
@@ -390,8 +390,8 @@ export default function Dashboard() {
                 key={c}
                 style={{
                   flex: 1,
-                  padding: "2px 0",
-                  fontSize: 8,
+                  padding: "4px 0",
+                  fontSize: 10,
                   fontWeight: 600,
                   borderRadius: 3,
                   border: `1px solid ${STC_GREY}`,
@@ -453,7 +453,7 @@ export default function Dashboard() {
                 zIndex: 1000,
                 background: "rgba(0,0,0,0.75)",
                 color: "white",
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 700,
                 padding: "3px 10px",
                 borderRadius: 3,
@@ -485,7 +485,7 @@ export default function Dashboard() {
                 background: "rgba(255,255,255,0.9)",
                 borderRadius: 3,
                 padding: "4px 8px",
-                fontSize: 8,
+                fontSize: 10,
                 display: "flex",
                 flexDirection: "column",
                 gap: 2,
@@ -535,10 +535,10 @@ export default function Dashboard() {
                   padding: 4,
                 }}
               >
-                <div style={{ fontSize: 20, fontWeight: 700, color: STC_PURPLE }}>
+                <div style={{ fontSize: 24, fontWeight: 700, color: STC_PURPLE }}>
                   {item.count}
                 </div>
-                <div style={{ fontSize: 8, color: "#555", textAlign: "center", lineHeight: 1.2 }}>
+                <div style={{ fontSize: 10, color: "#555", textAlign: "center", lineHeight: 1.2 }}>
                   {item.label}
                 </div>
               </div>
@@ -573,9 +573,9 @@ export default function Dashboard() {
               gap: 4,
             }}
           >
-            <div style={{ fontSize: 9, fontWeight: 700, color: "#444" }}>Availability</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#444" }}>Availability</div>
             <Gauge value={overallAvail} label="" size={120} />
-            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontSize: 9, color: "#888" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontSize: 11, color: "#888" }}>
               <span style={{ color: STC_RED }}>0.00 ↑</span>
               <span>80.00</span>
             </div>
@@ -609,8 +609,8 @@ export default function Dashboard() {
                   border: `1px solid ${STC_GREY}`,
                 }}
               >
-                <span style={{ fontSize: 8.5, color: "#555", fontWeight: 500 }}>{label}</span>
-                <span style={{ fontSize: 14, fontWeight: 800, color: accent, lineHeight: 1 }}>{value}</span>
+                <span style={{ fontSize: 11, color: "#555", fontWeight: 500 }}>{label}</span>
+                <span style={{ fontSize: 17, fontWeight: 800, color: accent, lineHeight: 1 }}>{value}</span>
               </div>
             ))}
           </div>
@@ -624,7 +624,7 @@ export default function Dashboard() {
           gridTemplateColumns: "1fr 1fr",
           gap: 6,
           padding: "0 6px 6px",
-          height: 150,
+          height: 185,
           flexShrink: 0,
           overflow: "hidden",
         }}
@@ -644,9 +644,9 @@ export default function Dashboard() {
             style={{
               background: STC_PURPLE,
               color: "white",
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: 700,
-              padding: "4px 8px",
+              padding: "5px 8px",
               letterSpacing: "0.04em",
             }}
           >
@@ -660,8 +660,8 @@ export default function Dashboard() {
                     <th
                       key={h}
                       style={{
-                        padding: "2px 4px",
-                        fontSize: 8,
+                        padding: "3px 5px",
+                        fontSize: 11,
                         fontWeight: 700,
                         textAlign: "left",
                         color: STC_PURPLE_DARK,
@@ -681,7 +681,7 @@ export default function Dashboard() {
                   <tr>
                     <td
                       colSpan={7}
-                      style={{ textAlign: "center", color: STC_GREEN, fontSize: 9, padding: "10px", fontWeight: 600 }}
+                      style={{ textAlign: "center", color: STC_GREEN, fontSize: 11, padding: "10px", fontWeight: 600 }}
                     >
                       No power outage tickets
                     </td>
@@ -711,9 +711,9 @@ export default function Dashboard() {
             style={{
               background: STC_PURPLE,
               color: "white",
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: 700,
-              padding: "4px 8px",
+              padding: "5px 8px",
               letterSpacing: "0.04em",
             }}
           >
@@ -727,8 +727,8 @@ export default function Dashboard() {
                     <th
                       key={h}
                       style={{
-                        padding: "2px 4px",
-                        fontSize: 8,
+                        padding: "3px 5px",
+                        fontSize: 11,
                         fontWeight: 700,
                         textAlign: "left",
                         color: STC_PURPLE_DARK,
@@ -748,7 +748,7 @@ export default function Dashboard() {
                   <tr>
                     <td
                       colSpan={7}
-                      style={{ textAlign: "center", color: STC_GREEN, fontSize: 9, padding: "10px", fontWeight: 600 }}
+                      style={{ textAlign: "center", color: STC_GREEN, fontSize: 11, padding: "10px", fontWeight: 600 }}
                     >
                       No telecom outage tickets
                     </td>

@@ -85,19 +85,19 @@ export default function Gauge({ value, label, size = 90, showValue = true }: Gau
           const maxP = polarToXY(cx, cy, ro + 6, END + 90);
           return (
             <>
-              <text x={minP.x} y={minP.y} fontSize={7} fill="#999" textAnchor="middle" dominantBaseline="middle">0</text>
-              <text x={maxP.x} y={maxP.y} fontSize={7} fill="#999" textAnchor="middle" dominantBaseline="middle">100</text>
+              <text x={minP.x} y={minP.y} fontSize={9} fill="#999" textAnchor="middle" dominantBaseline="middle">0</text>
+              <text x={maxP.x} y={maxP.y} fontSize={9} fill="#999" textAnchor="middle" dominantBaseline="middle">100</text>
             </>
           );
         })()}
       </svg>
       {showValue && (
-        <div style={{ fontSize: 12, fontWeight: 700, color, marginTop: -6, lineHeight: 1 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color, marginTop: -6, lineHeight: 1 }}>
           {pct.toFixed(2)}%
         </div>
       )}
       {label && (
-        <div style={{ fontSize: 8.5, color: "#555", textAlign: "center", marginTop: 2, lineHeight: 1.2 }}>
+        <div style={{ fontSize: 10, color: "#555", textAlign: "center", marginTop: 2, lineHeight: 1.2 }}>
           {label}
         </div>
       )}
