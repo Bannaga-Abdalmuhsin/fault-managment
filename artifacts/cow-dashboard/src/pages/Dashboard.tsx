@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import Map3D from "@/components/Map3D";
 import GaugeSvg from "@/components/Gauge";
+import PowerBIEmbed from "@/components/PowerBIEmbed";
 
 // ─── STC brand palette ────────────────────────────────────────────────────────
 const STC_PURPLE = "#6B1FA2";
@@ -758,6 +759,11 @@ export default function Dashboard() {
               </tbody>
             </table>
           </div>
+        </div>
+
+        {/* ── Power BI Embedded Report ──────────────────────────────────── */}
+        <div style={{ padding: "0 6px 6px" }}>
+          <PowerBIEmbed />
         </div>
       </div>
     </div>
