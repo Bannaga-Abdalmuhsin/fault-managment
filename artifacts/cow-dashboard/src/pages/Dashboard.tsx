@@ -555,7 +555,7 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <Map3D sites={[]} areaFilter={areaFilter} />
+            <Map3D sites={mapSites} areaFilter={areaFilter} />
           </div>
 
           {/* Site class cards */}
