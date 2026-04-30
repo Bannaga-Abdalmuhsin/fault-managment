@@ -542,8 +542,8 @@ export default function Dashboard() {
             }}>
               {[
                 { color: P.green,  label: "ON-AIR" },
-                { color: P.orange, label: "Degraded" },
-                { color: P.red,    label: "OFF-AIR" },
+                { color: P.orange, label: "Power Issue" },
+                { color: P.red,    label: "Outage" },
               ].map(({ color, label }) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                   <div style={{
