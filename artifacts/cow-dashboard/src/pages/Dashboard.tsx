@@ -482,29 +482,55 @@ export default function Dashboard() {
             boxShadow: "0 4px 20px rgba(26,5,51,0.25)",
             position: "relative", background: "#0a0a1a",
           }}>
-            {/* Top overlay pill */}
-            <div style={{
-              position: "absolute", top: 10, left: "50%", transform: "translateX(-50%)",
-              zIndex: 1000,
-              background: "rgba(10,0,30,0.82)",
-              backdropFilter: "blur(8px)",
-              border: "1px solid rgba(255,255,255,0.15)",
-              color: "#fff", fontSize: 12, fontWeight: 700,
-              padding: "5px 16px", borderRadius: 20, whiteSpace: "nowrap",
-              display: "flex", alignItems: "center", gap: 8,
-            }}>
-              <span style={{
-                width: 8, height: 8, borderRadius: "50%",
-                background: activeAvail >= 95 ? P.green : activeAvail >= 80 ? P.orange : P.red,
-                boxShadow: `0 0 8px ${activeAvail >= 95 ? P.green : activeAvail >= 80 ? P.orange : P.red}`,
-                display: "inline-block",
-              }} />
-              {areaFilter === "All" ? "All Areas" : areaFilter}
-              &nbsp;—&nbsp;
-              <span style={{ color: activeAvail >= 95 ? P.green : activeAvail >= 80 ? P.orange : P.red }}>
-                {activeAvail.toFixed(2)}% Available
-              </span>
-            </div>
+            {/* Scrolling availability ticker */}
+            {(() => {
+              const tickerZones = [
+                { label: "Mina",          avail: mina?.avail          ?? 100 },
+                { label: "Muzdalifah",    avail: muzdalifah?.avail    ?? 100 },
+                { label: "Arafat",        avail: arafat?.avail        ?? 100 },
+                { label: "Makkah Remote", avail: makkahRemote?.avail  ?? 100 },
+              ];
+              const itemColor = (v: number) => v >= 95 ? P.green : v >= 80 ? P.orange : P.red;
+              const sep = <span style={{ margin: "0 18px", opacity: 0.3, fontSize: 14 }}>|</span>;
+
+              const items = tickerZones.map(({ label, avail }, i) => (
+                <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: "50%",
+                    background: itemColor(avail),
+                    boxShadow: `0 0 7px ${itemColor(avail)}`,
+                    display: "inline-block", flexShrink: 0,
+                  }} />
+                  <span style={{ fontWeight: 700, color: "rgba(255,255,255,0.9)", fontSize: 12 }}>{label}</span>
+                  <span style={{ color: itemColor(avail), fontWeight: 800, fontSize: 12 }}>
+                    {avail.toFixed(2)}%
+                  </span>
+                  <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 500 }}>available</span>
+                  {i < tickerZones.length - 1 && sep}
+                </span>
+              ));
+
+              return (
+                <div style={{
+                  position: "absolute", top: 0, left: 0, right: 0,
+                  zIndex: 1000, overflow: "hidden",
+                  background: "rgba(10,0,30,0.82)",
+                  backdropFilter: "blur(8px)",
+                  borderBottom: "1px solid rgba(255,255,255,0.1)",
+                  height: 30, display: "flex", alignItems: "center",
+                }}>
+                  <div style={{
+                    display: "flex", alignItems: "center",
+                    animation: "tickerScroll 22s linear infinite",
+                    width: "max-content",
+                    gap: 0,
+                  }}>
+                    {/* Duplicate so the loop is seamless: animation moves -50% = exactly one full copy */}
+                    {items}{sep}{items}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Legend */}
             <div style={{
@@ -611,6 +637,10 @@ export default function Dashboard() {
         @keyframes pulse {
           0%, 100% { opacity: 1; box-shadow: 0 0 8px #00C878; }
           50%       { opacity: 0.5; box-shadow: 0 0 3px #00C878; }
+        }
+        @keyframes tickerScroll {
+          0%   { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
         }
         select option { background: #1A0533; }
         ::-webkit-scrollbar { width: 4px; }
