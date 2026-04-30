@@ -298,8 +298,11 @@ function LeafletMap({ sites, areaFilter }: Map3DProps) {
   return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }
 
-// ── Exported component — auto-selects renderer ────────────────────────────
+// ── Exported component ─────────────────────────────────────────────────────
+// Leaflet is used for all cases: it accurately positions markers at every zoom
+// level. The MapLibre 3D path is kept in the file but not wired up, as its
+// 52° pitch + terrain exaggeration distorts HTML marker positions when zoomed
+// out to global scale.
 export default function Map3D(props: Map3DProps) {
-  const [webGL] = useState(() => hasWebGL());
-  return webGL ? <MapLibre3D {...props} /> : <LeafletMap {...props} />;
+  return <LeafletMap {...props} />;
 }
