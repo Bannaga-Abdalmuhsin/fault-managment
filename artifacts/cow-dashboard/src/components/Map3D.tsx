@@ -263,63 +263,31 @@ function LeafletMap({ sites, areaFilter }: Map3DProps) {
     sites
       .filter((s) => s.latitude != null && s.longitude != null)
       .forEach((site) => {
-        // Status → colour mapping
-        //   operational  = green  (ON-AIR, no issues)
-        //   degraded     = yellow (power / partial issue)
-        //   anything else = red  (outage / OFF-AIR)
-        const isOperational = site.status === "operational";
-        const isDegraded    = site.status === "degraded";
+        const color =
+          site.status === "operational"
+            ? STC_GREEN
+            : site.status === "degraded"
+            ? STC_ORANGE
+            : STC_RED;
 
-        // 3-D globe colours: [bgGradient, glowRgba]
-        const [bgGrad, glowRgba] = isOperational
-          ? ["radial-gradient(ellipse at 38% 30%, #aaffcc 0%, #00C878 45%, #006633 100%)", "rgba(0,200,120,0.75)"]
-          : isDegraded
-          ? ["radial-gradient(ellipse at 38% 30%, #ffe87a 0%, #F59E0B 45%, #7a4800 100%)", "rgba(245,158,11,0.75)"]
-          : ["radial-gradient(ellipse at 38% 30%, #ffaaaa 0%, #EF4444 45%, #7a0000 100%)", "rgba(239,68,68,0.75)"];
-
-        const labelColor = isOperational ? STC_GREEN : isDegraded ? STC_ORANGE : STC_RED;
-
-        // COW truck icon + 3-D status globe below
-        const iconHtml = `
-          <div style="
-            display:flex;flex-direction:column;align-items:center;
-            cursor:pointer;width:26px;
-          ">
-            <img
-              src="/cow-icon.png"
-              width="26" height="30"
-              style="object-fit:contain;display:block;
-                filter:drop-shadow(0 2px 4px rgba(0,0,0,0.65));"
-            />
-            <div style="
-              width:13px;height:7px;border-radius:50%;
-              margin-top:1px;
-              background:${bgGrad};
-              box-shadow:0 3px 8px ${glowRgba},
-                         0 1px 2px rgba(0,0,0,0.45),
-                         inset 0 -1px 3px rgba(0,0,0,0.2);
-            "></div>
-          </div>`;
-
+        // Use DivIcon with an SVG circle — anchored to the exact coordinate
+        // at every zoom level (unlike CircleMarker which drifts in pixel space).
         const icon = L.divIcon({
           className: "",
-          html: iconHtml,
-          iconSize:    [26, 38],   // width × total height
-          iconAnchor:  [13, 38],   // bottom-centre → coordinate
-          tooltipAnchor: [0, -38],
+          html: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
+            <circle cx="10" cy="10" r="7" fill="${color}" stroke="white" stroke-width="2"
+              style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55))" />
+          </svg>`,
+          iconSize: [20, 20],
+          iconAnchor: [10, 10],
+          tooltipAnchor: [0, -12],
         });
 
         const marker = L.marker([site.latitude!, site.longitude!], { icon });
 
         marker.bindTooltip(
-          `<div style="font-family:system-ui;font-size:12px;min-width:140px;">
-            <strong style="font-size:13px">${site.name}</strong><br/>
-            Zone: <em>${site.zone}</em><br/>
-            Status: <span style="color:${labelColor};font-weight:700">
-              ${site.status.toUpperCase()}
-            </span>
-          </div>`,
-          { direction: "top", offset: [0, -8], opacity: 0.97 }
+          `<strong>${site.name}</strong><br/>Zone: ${site.zone}<br/>Status: <span style="color:${color};font-weight:700">${site.status.toUpperCase()}</span>`,
+          { direction: "top", offset: [0, -4] }
         );
 
         marker.addTo(map);
