@@ -220,6 +220,31 @@ router.get("/pbi/tickets/telecom", async (req, res) => {
   }
 });
 
+// ─── /api/pbi/zones ──────────────────────────────────────────────────────────
+// Returns per-district availability for WR-HAJJ sites
+router.get("/pbi/zones", async (req, res) => {
+  try {
+    const rows = await dax(`
+      EVALUATE
+      SUMMARIZECOLUMNS(
+        DB[District],
+        FILTER(DB, DB[Region] = "WR-HAJJ"),
+        "total", COUNTROWS(DB),
+        "onAir", CALCULATE(COUNTROWS(DB), DB[MSC ID] = "ON-AIR")
+      )
+    `);
+    const zones = rows.map((r: any) => ({
+      district: r["DB[District]"] ?? r["[District]"] ?? "",
+      total:    Number(r["[total]"] ?? 0),
+      onAir:    Number(r["[onAir]"] ?? 0),
+    }));
+    res.json(zones);
+  } catch (err: any) {
+    logger.error({ err }, "PBI zones error");
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── /api/pbi/kpis ───────────────────────────────────────────────────────────
 // Aggregated KPIs for the dashboard
 router.get("/pbi/kpis", async (req, res) => {
