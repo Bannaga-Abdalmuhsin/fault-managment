@@ -434,16 +434,16 @@ export default function Dashboard() {
         <Map3D sites={mapSites} areaFilter="WR-HAJJ" />
 
         {/* ── Hajj + Kaaba icons — top-center map overlay ──────────────── */}
-        <div style={{ position: "absolute", top: -58, left: "50%", transform: "translateX(-50%)",
+        {/* ── Hajj + Kaaba icons — top-center map overlay ──────────────── */}
+        {/* At h=200: hajj transparent-top=64px, kaaba=22px; container top=-(64-28)=-36 */}
+        <div style={{ position: "absolute", top: -36, left: "50%", transform: "translateX(-50%)",
           zIndex: 950, pointerEvents: "none",
           display: "flex", alignItems: "flex-start", gap: 0 }}>
-          {/* Calligraphy icon: transparent top = 86px at 270px height, already at top:-58 → content at y=28 */}
           <img src="/hajj-icon-nobg.png" alt="Hajj"
-            style={{ height: 270, objectFit: "contain",
+            style={{ height: 200, objectFit: "contain",
               filter: "brightness(2.2) sepia(0.3) saturate(2.2) drop-shadow(0 2px 12px rgba(0,0,0,0.7))" }} />
-          {/* Kaaba icon: transparent top = 29px at 270px height → shift down by (86-29)=57px to align content */}
           <img src="/kaaba-icon.png" alt="Kaaba"
-            style={{ height: 270, objectFit: "contain", marginTop: 57,
+            style={{ height: 200, objectFit: "contain", marginTop: 42,
               filter: "drop-shadow(0 2px 14px rgba(0,0,0,0.8))" }} />
         </div>
 
