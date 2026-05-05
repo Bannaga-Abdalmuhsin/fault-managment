@@ -435,15 +435,15 @@ export default function Dashboard() {
 
         {/* ── Hajj + Kaaba icons — top-center map overlay ──────────────── */}
         {/* ── Hajj + Kaaba icons — top-center map overlay ──────────────── */}
-        {/* At h=200: hajj transparent-top=64px, kaaba=22px; container top=-(64-28)=-36 */}
-        <div style={{ position: "absolute", top: -36, left: "50%", transform: "translateX(-50%)",
+        {/* At h=140: hajj transparent-top=45px, kaaba=15px; container top=-(45-28)=-17 */}
+        <div style={{ position: "absolute", top: -17, left: "50%", transform: "translateX(-50%)",
           zIndex: 950, pointerEvents: "none",
           display: "flex", alignItems: "flex-start", gap: 0 }}>
           <img src="/hajj-icon-nobg.png" alt="Hajj"
-            style={{ height: 200, objectFit: "contain",
+            style={{ height: 140, objectFit: "contain",
               filter: "brightness(2.2) sepia(0.3) saturate(2.2) drop-shadow(0 2px 12px rgba(0,0,0,0.7))" }} />
           <img src="/kaaba-icon.png" alt="Kaaba"
-            style={{ height: 200, objectFit: "contain", marginTop: 42,
+            style={{ height: 140, objectFit: "contain", marginTop: 30,
               filter: "drop-shadow(0 2px 14px rgba(0,0,0,0.8))" }} />
         </div>
 
