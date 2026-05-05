@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-const STC_GREEN = "#00C878";
+const STC_GREEN = "#38D4FF";
 const STC_ORANGE = "#F59E0B";
 const STC_RED = "#EF4444";
 
