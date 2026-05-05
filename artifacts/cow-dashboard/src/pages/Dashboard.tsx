@@ -100,11 +100,11 @@ function SLabel({ text }: { text: string }) {
 function KpiRow({ label, value, accent }: { label: string; value: number | string; accent: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-      padding: "2px 8px", borderRadius: 6,
+      padding: "2px 7px", borderRadius: 5,
       background: "rgba(255,255,255,0.07)",
       border: "1px solid rgba(255,255,255,0.06)" }}>
-      <span style={{ fontSize: 9.5, color: "rgba(255,255,255,0.82)", fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 15, fontWeight: 900, color: accent, lineHeight: 1 }}>{value}</span>
+      <span style={{ fontSize: 9, color: "rgba(255,255,255,0.82)", fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 900, color: accent, lineHeight: 1 }}>{value}</span>
     </div>
   );
 }
@@ -500,26 +500,17 @@ export default function Dashboard() {
           </div>
         </Glass>
 
-        {/* ── RIGHT glass panel: big gauge + KPIs (full height) ─────────── */}
-        <Glass style={{ position: "absolute", top: 36, bottom: 26, right: 10, zIndex: 900,
-          padding: "10px 12px", width: 228,
-          display: "flex", flexDirection: "column", gap: 5 }}>
+        {/* ── RIGHT: gauge panel (top) ────────────────────────────────────── */}
+        <Glass style={{ position: "absolute", top: 36, right: 10, zIndex: 900,
+          width: 228, padding: "6px 10px 6px",
+          display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <GaugeSvg value={overallAvail} size={178} />
+        </Glass>
 
-          {/* Big availability gauge */}
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-            <SLabel text="Hajj Availability" />
-            <GaugeSvg value={overallAvail} label="" size={120} />
-            <div style={{ display: "flex", justifyContent: "space-between", width: "100%",
-              fontSize: 9, marginTop: -8, padding: "0 6px" }}>
-              <span style={{ color: P.red, fontWeight: 700 }}>0%</span>
-              <span style={{ color: "rgba(255,255,255,0.55)", fontWeight: 600 }}>100%</span>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div style={{ height: 1, background: "rgba(200,140,255,0.2)", margin: "1px -2px" }} />
-
-          {/* All KPI rows — fill remaining space evenly */}
+        {/* ── RIGHT: KPI panel (below gauge) ──────────────────────────────── */}
+        <Glass style={{ position: "absolute", top: 192, bottom: 26, right: 10, zIndex: 900,
+          width: 228, padding: "8px 12px",
+          display: "flex", flexDirection: "column", gap: 3 }}>
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3,
             justifyContent: "space-evenly", overflowY: "hidden" }}>
             {[

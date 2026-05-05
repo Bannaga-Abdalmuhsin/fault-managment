@@ -1,106 +1,125 @@
-const STC_GREEN = "#00C878";
-const STC_ORANGE = "#F59E0B";
-const STC_RED = "#EF4444";
-const STC_GREY = "#E0D8EE";
+interface GaugeProps { value: number; size?: number; }
 
-interface GaugeProps {
-  value: number;       // 0-100
-  label?: string;
-  size?: number;       // width in px
-  showValue?: boolean;
+// Standard-math angle → SVG x/y (y-axis flipped)
+function pt(cx: number, cy: number, r: number, deg: number) {
+  const rad = (deg * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
 }
 
-function polarToXY(cx: number, cy: number, r: number, angleDeg: number) {
-  const rad = ((angleDeg - 90) * Math.PI) / 180;
-  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+// Arc segment on the TOP semicircle (sweep-flag=0 = CCW in SVG = goes UP)
+function arc(cx: number, cy: number, rm: number, a1: number, a2: number) {
+  const s = pt(cx, cy, rm, a1);
+  const e = pt(cx, cy, rm, a2);
+  return `M ${s.x.toFixed(2)} ${s.y.toFixed(2)} A ${rm} ${rm} 0 0 0 ${e.x.toFixed(2)} ${e.y.toFixed(2)}`;
 }
 
-function arcPath(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
-  const s = polarToXY(cx, cy, r, startAngle);
-  const e = polarToXY(cx, cy, r, endAngle);
-  const large = endAngle - startAngle > 180 ? 1 : 0;
-  return `M ${s.x} ${s.y} A ${r} ${r} 0 ${large} 1 ${e.x} ${e.y}`;
-}
+export default function Gauge({ value, size = 190 }: GaugeProps) {
+  const pct   = Math.min(100, Math.max(0, value));
+  const color = pct >= 95 ? "#00C878" : pct >= 80 ? "#F59E0B" : "#EF4444";
 
-export default function Gauge({ value, label, size = 90, showValue = true }: GaugeProps) {
-  const pct = Math.min(100, Math.max(0, value));
-  const color = pct > 95 ? STC_GREEN : pct > 80 ? STC_ORANGE : STC_RED;
+  // Arc geometry — center (cx,cy) at bottom, arc sweeps 180°→0° through top
+  const w    = size;
+  const rO   = size * 0.42;
+  const sw   = size * 0.12;
+  const rm   = rO - sw / 2;
+  const hubR = size * 0.048;
+  // Viewbox: top-half of arc (height = rO) + hub + label area below
+  const arcH  = rO + hubR + 3;
+  const textH = size * 0.22;   // space below arc for value + sub-label
+  const h     = arcH + textH;
+  const cx    = w / 2;
+  const cy    = arcH - hubR - 2;
 
-  // Gauge arc spans from -135° to +135° (270° total sweep)
-  const START = -135;
-  const END = 135;
-  const sweep = END - START; // 270°
-  const fillEnd = START + (pct / 100) * sweep;
+  // Needle: 0%→left(180°), 100%→right(0°)
+  const deg     = 180 - (pct / 100) * 180;
+  const needleR = rm - 4;
+  const baseW   = hubR * 0.55;
+  const tip     = pt(cx, cy, needleR, deg);
+  const bl      = pt(cx, cy, baseW, deg + 90);
+  const br      = pt(cx, cy, baseW, deg - 90);
 
-  const w = size;
-  const h = size * 0.8;
-  const cx = w / 2;
-  const cy = h * 0.72;
-  const ro = size * 0.38;   // outer radius
-  const ri = ro * 0.65;     // inner radius (donut)
-  const strokeW = ro - ri;
+  // Tick dashes at 0%, 50%, 100%
+  const ticks = [
+    { a: 180, lbl: "0%",   ax: "end" as const,    dx: -8 },
+    { a: 90,  lbl: "50%",  ax: "middle" as const,  dx: 0  },
+    { a: 0,   lbl: "100%", ax: "start" as const,   dx: 8  },
+  ];
 
-  // Needle angle
-  const needleAngle = START + (pct / 100) * sweep;
-  const needleLen = ri - 4;
-  const np = polarToXY(cx, cy, needleLen, needleAngle + 90);
+  const valFontSize = size * 0.155;
+  const subFontSize = size * 0.068;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: size }}>
-      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ overflow: "visible" }}>
-        {/* Background track */}
-        <path
-          d={arcPath(cx, cy, (ro + ri) / 2, START, END)}
-          fill="none"
-          stroke={STC_GREY}
-          strokeWidth={strokeW}
-          strokeLinecap="round"
-        />
-        {/* Colored fill arc */}
-        {pct > 0 && (
-          <path
-            d={arcPath(cx, cy, (ro + ri) / 2, START, fillEnd)}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeW}
-            strokeLinecap="round"
-          />
-        )}
-        {/* Needle */}
-        <line
-          x1={cx}
-          y1={cy}
-          x2={np.x}
-          y2={np.y}
-          stroke="#333"
-          strokeWidth={1.8}
-          strokeLinecap="round"
-        />
-        <circle cx={cx} cy={cy} r={4} fill="#444" />
-        <circle cx={cx} cy={cy} r={2} fill="white" />
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+      {/* Gray background track */}
+      <path d={arc(cx, cy, rm, 180, 0)}
+        fill="none" stroke="rgba(255,255,255,0.10)"
+        strokeWidth={sw} strokeLinecap="butt" />
 
-        {/* Min / Max labels */}
-        {(() => {
-          const minP = polarToXY(cx, cy, ro + 6, START + 90);
-          const maxP = polarToXY(cx, cy, ro + 6, END + 90);
-          return (
-            <>
-              <text x={minP.x} y={minP.y} fontSize={9} fill="#999" textAnchor="middle" dominantBaseline="middle">0</text>
-              <text x={maxP.x} y={maxP.y} fontSize={9} fill="#999" textAnchor="middle" dominantBaseline="middle">100</text>
-            </>
-          );
-        })()}
-      </svg>
-      {showValue && (
-        <div style={{ fontSize: 13, fontWeight: 700, color, marginTop: -6, lineHeight: 1 }}>
-          {pct.toFixed(2)}%
-        </div>
-      )}
-      {label && (
-        <div style={{ fontSize: 10, color: "#555", textAlign: "center", marginTop: 2, lineHeight: 1.2 }}>
-          {label}
-        </div>
-      )}
-    </div>
+      {/* Red zone 180°→120° */}
+      <path d={arc(cx, cy, rm, 180, 120)}
+        fill="none" stroke="#EF4444" strokeWidth={sw} strokeLinecap="butt" />
+
+      {/* Orange zone 120°→60° */}
+      <path d={arc(cx, cy, rm, 120, 60)}
+        fill="none" stroke="#F59E0B" strokeWidth={sw} strokeLinecap="butt" />
+
+      {/* Green zone 60°→0° */}
+      <path d={arc(cx, cy, rm, 60, 0)}
+        fill="none" stroke="#00C878" strokeWidth={sw} strokeLinecap="butt" />
+
+      {/* Tick dashes + labels */}
+      {ticks.map(({ a, lbl, ax, dx }) => {
+        const inner = pt(cx, cy, rO,     a);
+        const outer = pt(cx, cy, rO + 7, a);
+        const lblPt = pt(cx, cy, rO + 16, a);
+        return (
+          <g key={a}>
+            <line x1={inner.x} y1={inner.y} x2={outer.x} y2={outer.y}
+              stroke="rgba(255,255,255,0.55)" strokeWidth={1.8} />
+            <text x={lblPt.x + dx} y={lblPt.y}
+              fontSize={subFontSize * 0.88}
+              fill="rgba(255,255,255,0.55)"
+              textAnchor={ax} dominantBaseline="middle" fontWeight="700">
+              {lbl}
+            </text>
+          </g>
+        );
+      })}
+
+      {/* Needle */}
+      <polygon
+        points={`${tip.x.toFixed(2)},${tip.y.toFixed(2)} ${bl.x.toFixed(2)},${bl.y.toFixed(2)} ${br.x.toFixed(2)},${br.y.toFixed(2)}`}
+        fill="rgba(255,255,255,0.95)"
+        filter="url(#needleShadow)"
+      />
+      <defs>
+        <filter id="needleShadow" x="-50%" y="-50%" width="200%" height="200%">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" floodColor="rgba(0,0,0,0.65)" />
+        </filter>
+      </defs>
+
+      {/* Hub */}
+      <circle cx={cx} cy={cy} r={hubR}
+        fill="rgba(40,0,70,0.92)" stroke="rgba(255,255,255,0.45)" strokeWidth={1.5} />
+      <circle cx={cx} cy={cy} r={hubR * 0.38} fill="#fff" />
+
+      {/* Value text */}
+      <text
+        x={cx} y={arcH + textH * 0.38}
+        fontSize={valFontSize} fontWeight="900" fill={color}
+        textAnchor="middle" dominantBaseline="middle"
+        style={{ filter: `drop-shadow(0 0 6px ${color}88)` }}>
+        {pct.toFixed(1)}%
+      </text>
+
+      {/* Sub-label */}
+      <text
+        x={cx} y={arcH + textH * 0.78}
+        fontSize={subFontSize} fontWeight="700" fill="rgba(200,160,255,0.60)"
+        textAnchor="middle" dominantBaseline="middle"
+        letterSpacing="1.5">
+        AVAILABILITY
+      </text>
+    </svg>
   );
 }
