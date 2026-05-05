@@ -452,7 +452,7 @@ export default function Dashboard() {
           zIndex: 950, pointerEvents: "none" }}>
           <img src="/cow-truck-icon.png" alt="COW Truck"
             style={{ height: 140, objectFit: "contain",
-              filter: "drop-shadow(0 2px 10px rgba(0,0,0,0.8))" }} />
+              filter: "hue-rotate(270deg) saturate(2.5) brightness(0.85) drop-shadow(0 2px 10px rgba(0,0,0,0.8))" }} />
         </div>
 
         {/* ── Ticker ────────────────────────────────────────────────────── */}
