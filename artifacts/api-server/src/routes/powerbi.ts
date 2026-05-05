@@ -50,13 +50,13 @@ async function dax(query: string) {
 }
 
 // ─── /api/pbi/sites ──────────────────────────────────────────────────────────
-// Returns all COW sites from the DB table with lat/lon, status, label
+// Returns HAJJ-only COW sites (WR-HAJJ region) with lat/lon, status, label
 router.get("/pbi/sites", async (req, res) => {
   try {
     const rows = await dax(`
       EVALUATE
       SELECTCOLUMNS(
-        DB,
+        FILTER(DB, DB[Region] = "WR-HAJJ"),
         "siteId",        DB[Site ID],
         "region",        DB[Region],
         "zone",          DB[District],
@@ -228,15 +228,15 @@ router.get("/pbi/kpis", async (req, res) => {
       dax(`
         EVALUATE
         ROW(
-          "total",       COUNTROWS(DB),
-          "onAir",       CALCULATE(COUNTROWS(DB), DB[MSC ID] = "ON-AIR"),
-          "vvvip",       CALCULATE(COUNTROWS(DB), DB[Site label] = "VVVIP"),
-          "vvip",        CALCULATE(COUNTROWS(DB), DB[Site label] = "VVIP"),
-          "vip",         CALCULATE(COUNTROWS(DB), DB[Site label] = "VIP"),
-          "normal",      CALCULATE(COUNTROWS(DB), DB[Site label] = "Normal"),
-          "with2G",      CALCULATE(COUNTROWS(DB), DB[2G] = 1),
-          "with4G",      CALCULATE(COUNTROWS(DB), DB[4G] = 1),
-          "with5G",      CALCULATE(COUNTROWS(DB), DB[5G] = 1)
+          "total",       CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ"),
+          "onAir",       CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[MSC ID] = "ON-AIR"),
+          "vvvip",       CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[Site label] = "VVVIP"),
+          "vvip",        CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[Site label] = "VVIP"),
+          "vip",         CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[Site label] = "VIP"),
+          "normal",      CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[Site label] = "Normal"),
+          "with2G",      CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[2G] = 1),
+          "with4G",      CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[4G] = 1),
+          "with5G",      CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[5G] = 1)
         )
       `),
       dax(`
