@@ -408,18 +408,13 @@ export default function Dashboard() {
           <div style={{ opacity: 0.7 }}>⟳ {timeStr}</div>
         </div>
 
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
-          <img src="/hajj-icon-nobg.png" alt="Hajj"
-            style={{ height: 52, objectFit: "contain",
-              filter: "brightness(2.5) sepia(0.4) saturate(2) drop-shadow(0 0 6px rgba(255,210,80,0.7))" }} />
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-            <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", letterSpacing: 0.5,
-              textShadow: "0 2px 16px rgba(0,0,0,0.4)" }}>
-              COW HAJJ 1447 — Interactive Status
-            </div>
-            <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.6)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
-              Live Power BI · {sitesLoading ? "…" : totalSites} Hajj sites monitored
-            </div>
+        <div style={{ flex: 1, textAlign: "center" }}>
+          <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", letterSpacing: 0.5,
+            textShadow: "0 2px 16px rgba(0,0,0,0.4)" }}>
+            COW HAJJ 1447 — Interactive Status
+          </div>
+          <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.6)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
+            Live Power BI · {sitesLoading ? "…" : totalSites} Hajj sites monitored
           </div>
         </div>
 
@@ -437,6 +432,14 @@ export default function Dashboard() {
       {/* ══ MAP (full width) ══════════════════════════════════════════════════ */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
         <Map3D sites={mapSites} areaFilter="WR-HAJJ" />
+
+        {/* ── Hajj icon — top-center map overlay ───────────────────────── */}
+        <div style={{ position: "absolute", top: 36, left: "50%", transform: "translateX(-50%)",
+          zIndex: 950, pointerEvents: "none" }}>
+          <img src="/hajj-icon-nobg.png" alt="Hajj"
+            style={{ height: 90, objectFit: "contain",
+              filter: "brightness(2.2) sepia(0.3) saturate(2.2) drop-shadow(0 2px 12px rgba(0,0,0,0.7))" }} />
+        </div>
 
         {/* ── Ticker ────────────────────────────────────────────────────── */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 1000,
