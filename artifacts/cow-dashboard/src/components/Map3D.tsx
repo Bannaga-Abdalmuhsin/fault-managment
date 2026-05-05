@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-const STC_GREEN = "#38D4FF";
-const STC_ORANGE = "#F59E0B";
-const STC_RED = "#EF4444";
+const STC_GREEN  = "#00C878";   // operational — no tickets
+const STC_YELLOW = "#F59E0B";   // has open NSA / telecom ticket
+const STC_RED    = "#EF4444";   // has open power outage ticket
 
 export interface MapSite {
   id: number;
@@ -13,6 +13,8 @@ export interface MapSite {
   status: string;
   latitude: number | null | undefined;
   longitude: number | null | undefined;
+  hasPowerTicket?: boolean;
+  hasNsaTicket?: boolean;
 }
 
 interface Map3DProps {
@@ -173,12 +175,11 @@ function addMarkers(sites: MapSite[], map: any, maplibregl: any, markersRef: any
   sites
     .filter((s) => s.latitude != null && s.longitude != null)
     .forEach((site) => {
-      const color =
-        site.status === "operational"
-          ? STC_GREEN
-          : site.status === "degraded"
-          ? STC_ORANGE
-          : STC_RED;
+      const color = site.hasPowerTicket
+        ? STC_RED
+        : site.hasNsaTicket
+        ? STC_YELLOW
+        : STC_GREEN;
 
       // Outer wrapper: fixed 28×28 transparent hit-area — never resizes so the
       // cursor can't escape it and trigger the mouseenter/leave flicker loop.
@@ -263,12 +264,11 @@ function LeafletMap({ sites, areaFilter }: Map3DProps) {
     sites
       .filter((s) => s.latitude != null && s.longitude != null)
       .forEach((site) => {
-        const color =
-          site.status === "operational"
-            ? STC_GREEN
-            : site.status === "degraded"
-            ? STC_ORANGE
-            : STC_RED;
+        const color = site.hasPowerTicket
+          ? STC_RED
+          : site.hasNsaTicket
+          ? STC_YELLOW
+          : STC_GREEN;
 
         // Use DivIcon with an SVG circle — anchored to the exact coordinate
         // at every zoom level (unlike CircleMarker which drifts in pixel space).

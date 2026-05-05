@@ -321,16 +321,24 @@ export default function Dashboard() {
   const { data: kpis }                                = usePbi<PbiKpis>("/pbi/kpis",              60_000);
 
   // ── Map sites ──────────────────────────────────────────────────────────────
-  const mapSites = useMemo(() =>
-    (pbiSites ?? [])
+  const mapSites = useMemo(() => {
+    const openPower = new Set(
+      (powerTix ?? []).filter(t => t.status !== "closed").map(t => t.siteName)
+    );
+    const openNsa = new Set(
+      (telecomTix ?? []).filter(t => t.status !== "closed").map(t => t.siteName)
+    );
+    return (pbiSites ?? [])
       .filter(s => s.latitude != null && s.longitude != null)
       .filter(s => cowIdFilter === "All" || s.name === cowIdFilter)
       .map((s, i) => ({
         id: i as unknown as number, name: s.name, zone: s.zone ?? "Hajj",
         status: s.status, latitude: s.latitude!, longitude: s.longitude!,
         siteClass: s.siteLabel,
-      })),
-  [pbiSites, cowIdFilter]);
+        hasPowerTicket: openPower.has(s.name),
+        hasNsaTicket:   openNsa.has(s.name),
+      }));
+  }, [pbiSites, cowIdFilter, powerTix, telecomTix]);
 
   // ── Ticket filtering ───────────────────────────────────────────────────────
   const fTix = (tix: PbiTicket[] | null) =>
