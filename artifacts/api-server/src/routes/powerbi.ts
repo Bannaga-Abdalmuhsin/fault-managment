@@ -3,11 +3,11 @@ import { logger } from "../lib/logger";
 
 const router = Router();
 
-const TENANT_ID    = process.env.PBI_TENANT_ID!;
-const CLIENT_ID    = process.env.PBI_CLIENT_ID!;
-const CLIENT_SECRET = process.env.PBI_CLIENT_SECRET!;
-const WORKSPACE_ID = process.env.PBI_WORKSPACE_ID!;
-const DATASET_ID   = process.env.PBI_DATASET_ID!;
+const TENANT_ID    = (process.env.PBI_TENANT_ID    ?? "").trim();
+const CLIENT_ID    = (process.env.PBI_CLIENT_ID    ?? "").trim();
+const CLIENT_SECRET = (process.env.PBI_CLIENT_SECRET ?? "").trim();
+const WORKSPACE_ID = (process.env.PBI_WORKSPACE_ID ?? "").trim();
+const DATASET_ID   = (process.env.PBI_DATASET_ID   ?? "").trim();
 
 let cachedToken: string | null = null;
 let tokenExpiry = 0;
@@ -75,24 +75,29 @@ router.get("/pbi/sites", async (req, res) => {
       )
     `);
     // Normalise status: "ON-AIR" → operational, anything else → offline
-    const sites = rows.map((r: any) => ({
-      id: r["[siteId]"],
-      name: r["[siteId]"],
-      region: r["[region]"],
-      zone: r["[zone]"],
-      technology: r["[technology]"],
-      siteLabel: r["[siteLabel]"],    // Normal / VIP / VVIP / VVVIP
-      vendor: r["[vendor]"],
-      latitude: r["[latitude]"],
-      longitude: r["[longitude]"],
-      status: (r["[status]"] ?? "").toString().toUpperCase() === "ON-AIR" ? "operational" : "offline",
-      pmpStatus: r["[pmpStatus]"],
-      powerConfig: r["[powerConfig]"],
-      chain: r["[chain]"],
-      has2G: r["[has2G]"] === 1,
-      has4G: r["[has4G]"] === 1,
-      has5G: r["[has5G]"] === 1,
-    }));
+    const sites = rows.map((r: any) => {
+      const mscId = (r["[status]"] ?? "").toString().toUpperCase();
+      const pmp   = (r["[pmpStatus]"] ?? "").toString().toUpperCase();
+      const operational = mscId === "ON-AIR" && pmp !== "DOWN";
+      return {
+        id: r["[siteId]"],
+        name: r["[siteId]"],
+        region: r["[region]"],
+        zone: r["[zone]"],      // district value e.g. "MAKKAH", "Riyadh District"
+        technology: r["[technology]"],
+        siteLabel: r["[siteLabel]"],
+        vendor: r["[vendor]"],
+        latitude: r["[latitude]"],
+        longitude: r["[longitude]"],
+        status: operational ? "operational" : "offline",
+        pmpStatus: r["[pmpStatus]"],
+        powerConfig: r["[powerConfig]"],
+        chain: r["[chain]"],
+        has2G: r["[has2G]"] === 1,
+        has4G: r["[has4G]"] === 1,
+        has5G: r["[has5G]"] === 1,
+      };
+    });
     res.json(sites);
   } catch (err: any) {
     logger.error({ err }, "PBI sites error");
