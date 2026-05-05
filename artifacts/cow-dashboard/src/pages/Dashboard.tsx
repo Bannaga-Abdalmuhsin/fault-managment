@@ -1,10 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
-import {
-  useGetDashboardSummary,
-  useGetSiteStatus,
-  useListTickets,
-  useListSites,
-} from "@workspace/api-client-react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Map3D from "@/components/Map3D";
 import GaugeSvg from "@/components/Gauge";
 
@@ -26,6 +20,88 @@ const P = {
   textMuted:  "#6B6880",
 };
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface PbiSite {
+  id: string;
+  name: string;
+  region: string;
+  zone: string;
+  technology: string;
+  siteLabel: string;
+  vendor: string;
+  latitude: number | null;
+  longitude: number | null;
+  status: "operational" | "offline";
+  pmpStatus: string;
+  powerConfig: string;
+  chain: number;
+  has2G: boolean;
+  has4G: boolean;
+  has5G: boolean;
+}
+
+interface PbiTicket {
+  id: string;
+  ttNumber: string;
+  siteId: string;
+  siteName: string;
+  type: "power" | "telecom";
+  status: string;
+  priority: string;
+  title: string;
+  description: string;
+  actionTaken: string;
+  assignedTo: string;
+  owner: string;
+  powerSource: string;
+  durationMin: number | null;
+  totalDuration: string;
+  slaBreach: string;
+  siteLabel: string;
+  region: string;
+  createdAt: string;
+}
+
+interface PbiKpis {
+  sites: {
+    total: number; onAir: number; offAir: number; availability: number;
+    vvvip: number; vvip: number; vip: number; normal: number;
+    with2G: number; with4G: number; with5G: number;
+  };
+  power:   { open: number; closed: number; high: number; critical: number };
+  telecom: { open: number; closed: number; high: number; critical: number };
+}
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+// ─── Data hooks ───────────────────────────────────────────────────────────────
+function usePbi<T>(path: string, interval = 60_000) {
+  const [data, setData]   = useState<T | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(async () => {
+    try {
+      const r = await fetch(`${BASE}/api${path}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      setData(await r.json());
+      setError(null);
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [path]);
+
+  useEffect(() => {
+    load();
+    const id = setInterval(load, interval);
+    return () => clearInterval(id);
+  }, [load, interval]);
+
+  return { data, error, loading };
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function availability(op: number, total: number) {
   if (!total) return 100;
@@ -41,12 +117,11 @@ function useClock() {
   return now;
 }
 
-// ─── Gauge wrapper ────────────────────────────────────────────────────────────
+// ─── Sub-components ───────────────────────────────────────────────────────────
 function Gauge({ value, label, size = 90 }: { value: number; label: string; size?: number }) {
   return <GaugeSvg value={value} label={label} size={size} />;
 }
 
-// ─── Pill badge ───────────────────────────────────────────────────────────────
 function Badge({ text, bg, fg = "#fff" }: { text: string; bg: string; fg?: string }) {
   return (
     <span style={{
@@ -59,7 +134,6 @@ function Badge({ text, bg, fg = "#fff" }: { text: string; bg: string; fg?: strin
   );
 }
 
-// ─── Sidebar section label ────────────────────────────────────────────────────
 function SideLabel({ text }: { text: string }) {
   return (
     <div style={{
@@ -72,7 +146,6 @@ function SideLabel({ text }: { text: string }) {
   );
 }
 
-// ─── KPI row (right panel) ────────────────────────────────────────────────────
 function KpiRow({ label, value, accent }: { label: string; value: number | string; accent: string }) {
   return (
     <div style={{
@@ -87,7 +160,6 @@ function KpiRow({ label, value, accent }: { label: string; value: number | strin
   );
 }
 
-// ─── Area stat card (right panel) ─────────────────────────────────────────────
 function AreaStat({ label, op, total, down }: { label: string; op: number; total: number; down: number }) {
   const pct = total ? Math.min((op / total) * 100, 100) : 100;
   const barColor = down > 0 ? P.orange : P.green;
@@ -111,7 +183,6 @@ function AreaStat({ label, op, total, down }: { label: string; op: number; total
   );
 }
 
-// ─── Site class card (center column) ──────────────────────────────────────────
 function ClassCard({ label, count, gradient }: { label: string; count: number; gradient: string }) {
   return (
     <div style={{
@@ -128,8 +199,7 @@ function ClassCard({ label, count, gradient }: { label: string; count: number; g
   );
 }
 
-// ─── Ticket row ───────────────────────────────────────────────────────────────
-function TicketRow({ ticket, idx }: { ticket: any; idx: number }) {
+function TicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
   const statusBg =
     ticket.status === "open"        ? P.red
     : ticket.status === "in_progress" ? P.orange
@@ -139,11 +209,12 @@ function TicketRow({ ticket, idx }: { ticket: any; idx: number }) {
     : ticket.priority === "high"   ? P.orange
     : P.textMuted;
 
+  const timeLabel = ticket.createdAt
+    ? new Date(ticket.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+    : "—";
+
   return (
-    <tr style={{
-      background: idx % 2 === 0 ? "#fff" : P.greyLight,
-      fontSize: 11, transition: "background 0.12s",
-    }}>
+    <tr style={{ background: idx % 2 === 0 ? "#fff" : P.greyLight, fontSize: 11 }}>
       <td style={{ padding: "4px 8px", fontWeight: 600, color: P.text, whiteSpace: "nowrap" }}>
         {ticket.siteName}
       </td>
@@ -165,16 +236,17 @@ function TicketRow({ ticket, idx }: { ticket: any; idx: number }) {
         {ticket.priority}
       </td>
       <td style={{ padding: "4px 8px", color: P.textMuted, whiteSpace: "nowrap" }}>
-        {new Date(ticket.createdAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+        {ticket.totalDuration ?? timeLabel}
       </td>
       <td style={{ padding: "4px 8px", color: P.textMuted }}>{ticket.assignedTo ?? "—"}</td>
     </tr>
   );
 }
 
-// ─── Ticket table ─────────────────────────────────────────────────────────────
-function TicketTable({ title, tickets, accent }: { title: string; tickets: any[]; accent: string }) {
-  const cols = ["Site", "Type", "Title", "Status", "Priority", "Time", "Assigned To"];
+function TicketTable({ title, tickets, accent, loading }: {
+  title: string; tickets: PbiTicket[]; accent: string; loading: boolean;
+}) {
+  const cols = ["Site", "Type", "Issue", "Status", "Priority", "Duration", "FO Staff"];
   return (
     <div style={{
       background: "#fff", borderRadius: 10, overflow: "hidden",
@@ -195,7 +267,7 @@ function TicketTable({ title, tickets, accent }: { title: string; tickets: any[]
           marginLeft: "auto", background: "rgba(255,255,255,0.2)",
           borderRadius: 20, padding: "1px 10px", fontSize: 10,
         }}>
-          {tickets.length} active
+          {loading ? "…" : `${tickets.length} active`}
         </span>
       </div>
       <div style={{ overflowY: "auto", flex: 1 }}>
@@ -216,12 +288,15 @@ function TicketTable({ title, tickets, accent }: { title: string; tickets: any[]
             </tr>
           </thead>
           <tbody>
-            {tickets.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan={7} style={{
-                  textAlign: "center", color: P.green,
-                  fontSize: 12, padding: "16px", fontWeight: 600,
-                }}>
+                <td colSpan={7} style={{ textAlign: "center", color: P.textMuted, fontSize: 12, padding: 16 }}>
+                  Loading from Power BI…
+                </td>
+              </tr>
+            ) : tickets.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 16, fontWeight: 600 }}>
                   ✓ No active tickets
                 </td>
               </tr>
@@ -245,64 +320,105 @@ export default function Dashboard() {
   const dateStr = clock.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = clock.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-  const { data: sites }   = useListSites();
-  const { data: tickets } = useListTickets();
-  useGetDashboardSummary();
-  useGetSiteStatus();
+  // ── Live Power BI data (refresh every 60s) ──────────────────────────────────
+  const { data: pbiSites,   loading: sitesLoading }   = usePbi<PbiSite[]>("/pbi/sites", 60_000);
+  const { data: powerTix,   loading: powerLoading }   = usePbi<PbiTicket[]>("/pbi/tickets/power", 60_000);
+  const { data: telecomTix, loading: telecomLoading } = usePbi<PbiTicket[]>("/pbi/tickets/telecom", 60_000);
+  const { data: kpis }                                = usePbi<PbiKpis>("/pbi/kpis", 60_000);
 
+  // ── Derive zone stats from PBI sites ────────────────────────────────────────
   const zones = useMemo(() => {
-    const all = sites ?? [];
+    const all = pbiSites ?? [];
     return ["Arafat", "Mina", "Muzdalifah", "Haram", "Makkah Remote"].map((area) => {
-      const zs = all.filter((s) => s.zone === area);
+      const zs   = all.filter((s) => s.zone === area || s.region === area);
       const op   = zs.filter((s) => s.status === "operational").length;
       const down = zs.filter((s) => s.status !== "operational").length;
       return { area, total: zs.length, op, down, avail: availability(op, zs.length) };
     });
-  }, [sites]);
+  }, [pbiSites]);
 
-  const zoneMap = Object.fromEntries(zones.map((z) => [z.area, z]));
-  const arafat      = zoneMap["Arafat"];
-  const mina        = zoneMap["Mina"];
-  const muzdalifah  = zoneMap["Muzdalifah"];
+  const zoneMap      = Object.fromEntries(zones.map((z) => [z.area, z]));
+  const arafat       = zoneMap["Arafat"];
+  const mina         = zoneMap["Mina"];
+  const muzdalifah   = zoneMap["Muzdalifah"];
   const makkahRemote = zoneMap["Makkah Remote"];
-  const haram       = zoneMap["Haram"];
+  const haram        = zoneMap["Haram"];
 
-  const overallAvail = useMemo(() => {
-    const all = sites ?? [];
-    if (!all.length) return 100;
-    return availability(all.filter((s) => s.status === "operational").length, all.length);
-  }, [sites]);
+  const overallAvail = kpis?.sites.availability ?? 100;
+  const totalSites   = kpis?.sites.total   ?? 0;
+  const onAirSites   = kpis?.sites.onAir   ?? 0;
+  const offAirSites  = kpis?.sites.offAir  ?? 0;
 
-  const totalSites   = sites?.length ?? 0;
-  const offlineSites = (sites ?? []).filter((s) => s.status !== "operational").length;
-
+  // ── Map sites (filter by area) ───────────────────────────────────────────────
   const mapSites = useMemo(() =>
-    (sites ?? []).filter((s) =>
+    (pbiSites ?? []).filter((s) =>
       s.latitude != null && s.longitude != null &&
-      (areaFilter === "All" || s.zone === areaFilter)
-    ), [sites, areaFilter]);
+      (areaFilter === "All" || s.zone === areaFilter || s.region === areaFilter)
+    ).map((s) => ({
+      id: s.id as unknown as number,
+      name: s.name,
+      zone: s.zone ?? s.region,
+      status: s.status,
+      latitude: s.latitude!,
+      longitude: s.longitude!,
+      siteClass: s.siteLabel,
+    })),
+  [pbiSites, areaFilter]);
 
-  const openTickets   = useMemo(() => (tickets ?? []).filter((t) => t.status === "open" || t.status === "in_progress"), [tickets]);
-  const powerTickets  = useMemo(() => openTickets.filter((t) => t.type === "power"),   [openTickets]);
-  const telecomTickets = useMemo(() => openTickets.filter((t) => t.type === "telecom"), [openTickets]);
+  // ── Ticket lists ─────────────────────────────────────────────────────────────
+  const filteredPower = useMemo(() => {
+    const all = powerTix ?? [];
+    if (statusFilter === "Closed") return all.filter((t) => t.status === "closed");
+    return all.filter((t) => t.status !== "closed");
+  }, [powerTix, statusFilter]);
+
+  const filteredTelecom = useMemo(() => {
+    const all = telecomTix ?? [];
+    if (statusFilter === "Closed") return all.filter((t) => t.status === "closed");
+    return all.filter((t) => t.status !== "closed");
+  }, [telecomTix, statusFilter]);
+
+  // ── Active availability for gauge ────────────────────────────────────────────
+  const activeAvail =
+    areaFilter === "All"            ? overallAvail
+    : areaFilter === "Arafat"       ? (arafat?.avail      ?? 100)
+    : areaFilter === "Mina"         ? (mina?.avail         ?? 100)
+    : areaFilter === "Muzdalifah"   ? (muzdalifah?.avail   ?? 100)
+    : areaFilter === "Makkah Remote"? (makkahRemote?.avail ?? 100)
+    : areaFilter === "Haram"        ? (haram?.avail        ?? 100)
+    : overallAvail;
 
   const areaOptions = [
-    { key: "All",          label: "All" },
-    { key: "Arafat",       label: "Arafat" },
-    { key: "Mina",         label: "Mina" },
-    { key: "Muzdalifah",   label: "Muzdalifah" },
-    { key: "Makkah Remote",label: "Makkah R." },
-    { key: "Haram",        label: "Haram" },
+    { key: "All",           label: "All" },
+    { key: "Arafat",        label: "Arafat" },
+    { key: "Mina",          label: "Mina" },
+    { key: "Muzdalifah",    label: "Muzdalifah" },
+    { key: "Makkah Remote", label: "Makkah R." },
+    { key: "Haram",         label: "Haram" },
   ];
 
-  const activeAvail =
-    areaFilter === "All"           ? overallAvail
-    : areaFilter === "Arafat"      ? (arafat?.avail ?? 100)
-    : areaFilter === "Mina"        ? (mina?.avail ?? 100)
-    : areaFilter === "Muzdalifah"  ? (muzdalifah?.avail ?? 100)
-    : areaFilter === "Makkah Remote" ? (makkahRemote?.avail ?? 100)
-    : areaFilter === "Haram"       ? (haram?.avail ?? 100)
-    : overallAvail;
+  // ── Ticker zones ─────────────────────────────────────────────────────────────
+  const tickerZones = [
+    { label: "Mina",         avail: mina?.avail         ?? 100 },
+    { label: "Muzdalifah",   avail: muzdalifah?.avail   ?? 100 },
+    { label: "Arafat",       avail: arafat?.avail        ?? 100 },
+    { label: "Makkah Remote",avail: makkahRemote?.avail  ?? 100 },
+  ];
+  const itemColor = (v: number) => v >= 95 ? P.green : v >= 80 ? P.orange : P.red;
+  const sep = <span style={{ margin: "0 18px", opacity: 0.3, fontSize: 14 }}>|</span>;
+  const tickerItems = tickerZones.map(({ label, avail }, i) => (
+    <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}>
+      <span style={{
+        width: 8, height: 8, borderRadius: "50%",
+        background: itemColor(avail), boxShadow: `0 0 7px ${itemColor(avail)}`,
+        display: "inline-block", flexShrink: 0,
+      }} />
+      <span style={{ fontWeight: 700, color: "rgba(255,255,255,0.9)", fontSize: 12 }}>{label}</span>
+      <span style={{ color: itemColor(avail), fontWeight: 800, fontSize: 12 }}>{avail.toFixed(2)}%</span>
+      <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>available</span>
+      {i < tickerZones.length - 1 && sep}
+    </span>
+  ));
 
   return (
     <div style={{
@@ -339,11 +455,10 @@ export default function Dashboard() {
           </div>
           <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", letterSpacing: "0.06em",
             textTransform: "uppercase" }}>
-            Real-time monitoring of all deployed COW sites
+            Live data from Power BI · {totalSites} sites monitored
           </div>
         </div>
 
-        {/* Live status pill */}
         <div style={{
           display: "flex", alignItems: "center", gap: 6,
           background: "rgba(0,200,120,0.15)", border: "1px solid rgba(0,200,120,0.4)",
@@ -375,8 +490,6 @@ export default function Dashboard() {
           gap: 8, padding: "10px 8px", overflow: "hidden",
           boxShadow: "0 4px 20px rgba(26,5,51,0.5)",
         }}>
-
-          {/* COW ID */}
           <SideLabel text="COW ID" />
           <select
             value={cowIdFilter}
@@ -390,12 +503,11 @@ export default function Dashboard() {
             }}
           >
             <option value="All" style={{ background: P.purpleDeep }}>All Sites</option>
-            {(sites ?? []).map((s) => (
-              <option key={s.id} value={s.name} style={{ background: P.purpleDeep }}>{s.name}</option>
+            {(pbiSites ?? []).map((s) => (
+              <option key={s.id} value={s.id} style={{ background: P.purpleDeep }}>{s.id}</option>
             ))}
           </select>
 
-          {/* Status */}
           <SideLabel text="Status" />
           <div style={{ display: "flex", gap: 4 }}>
             {["Closed", "Open"].map((s) => {
@@ -415,7 +527,6 @@ export default function Dashboard() {
             })}
           </div>
 
-          {/* Area */}
           <SideLabel text="Area" />
           <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
             {areaOptions.map(({ key, label }) => {
@@ -435,13 +546,12 @@ export default function Dashboard() {
             })}
           </div>
 
-          {/* Classification */}
           <SideLabel text="Classification" />
           <div style={{ display: "flex", gap: 4 }}>
             {["Normal", "VIP", "VVVIP"].map((c) => (
               <button key={c} style={{
                 flex: 1, padding: "4px 0", fontSize: 9, fontWeight: 700,
-                borderRadius: 6, cursor: "pointer", transition: "all 0.15s",
+                borderRadius: 6, cursor: "pointer",
                 border: "1px solid rgba(255,255,255,0.2)",
                 background: "rgba(255,255,255,0.06)",
                 color: "rgba(255,255,255,0.75)",
@@ -454,9 +564,9 @@ export default function Dashboard() {
           {/* Zone gauges */}
           <div style={{ flex: 1, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4, overflow: "hidden" }}>
             {[
-              { label: "Arafat",   val: arafat?.avail   ?? 100 },
-              { label: "Muzdalifah", val: muzdalifah?.avail ?? 100 },
-              { label: "Mina",     val: mina?.avail     ?? 100 },
+              { label: "Arafat",    val: arafat?.avail      ?? 100 },
+              { label: "Muzdalifah",val: muzdalifah?.avail  ?? 100 },
+              { label: "Mina",      val: mina?.avail        ?? 100 },
               { label: "Makkah R.", val: makkahRemote?.avail ?? 100 },
             ].map(({ label, val }) => (
               <div key={label} style={{
@@ -472,10 +582,7 @@ export default function Dashboard() {
         </div>
 
         {/* ── CENTER: MAP + SITE CLASS COLUMN ───────────────────────────── */}
-        <div style={{
-          display: "grid", gridTemplateColumns: "1fr 82px",
-          gap: 6, minHeight: 0, overflow: "hidden",
-        }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 82px", gap: 6, minHeight: 0, overflow: "hidden" }}>
           {/* Map */}
           <div style={{
             borderRadius: 12, overflow: "hidden",
@@ -483,54 +590,34 @@ export default function Dashboard() {
             position: "relative", background: "#0a0a1a",
           }}>
             {/* Scrolling availability ticker */}
-            {(() => {
-              const tickerZones = [
-                { label: "Mina",          avail: mina?.avail          ?? 100 },
-                { label: "Muzdalifah",    avail: muzdalifah?.avail    ?? 100 },
-                { label: "Arafat",        avail: arafat?.avail        ?? 100 },
-                { label: "Makkah Remote", avail: makkahRemote?.avail  ?? 100 },
-              ];
-              const itemColor = (v: number) => v >= 95 ? P.green : v >= 80 ? P.orange : P.red;
-              const sep = <span style={{ margin: "0 18px", opacity: 0.3, fontSize: 14 }}>|</span>;
+            <div style={{
+              position: "absolute", top: 0, left: 0, right: 0,
+              zIndex: 1000, overflow: "hidden",
+              background: "rgba(10,0,30,0.82)", backdropFilter: "blur(8px)",
+              borderBottom: "1px solid rgba(255,255,255,0.1)",
+              height: 30, display: "flex", alignItems: "center",
+            }}>
+              <div style={{
+                display: "flex", alignItems: "center",
+                animation: "tickerScroll 22s linear infinite",
+                width: "max-content",
+              }}>
+                {tickerItems}{sep}{tickerItems}
+              </div>
+            </div>
 
-              const items = tickerZones.map(({ label, avail }, i) => (
-                <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: 7, whiteSpace: "nowrap" }}>
-                  <span style={{
-                    width: 8, height: 8, borderRadius: "50%",
-                    background: itemColor(avail),
-                    boxShadow: `0 0 7px ${itemColor(avail)}`,
-                    display: "inline-block", flexShrink: 0,
-                  }} />
-                  <span style={{ fontWeight: 700, color: "rgba(255,255,255,0.9)", fontSize: 12 }}>{label}</span>
-                  <span style={{ color: itemColor(avail), fontWeight: 800, fontSize: 12 }}>
-                    {avail.toFixed(2)}%
-                  </span>
-                  <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: 500 }}>available</span>
-                  {i < tickerZones.length - 1 && sep}
-                </span>
-              ));
-
-              return (
-                <div style={{
-                  position: "absolute", top: 0, left: 0, right: 0,
-                  zIndex: 1000, overflow: "hidden",
-                  background: "rgba(10,0,30,0.82)",
-                  backdropFilter: "blur(8px)",
-                  borderBottom: "1px solid rgba(255,255,255,0.1)",
-                  height: 30, display: "flex", alignItems: "center",
-                }}>
-                  <div style={{
-                    display: "flex", alignItems: "center",
-                    animation: "tickerScroll 22s linear infinite",
-                    width: "max-content",
-                    gap: 0,
-                  }}>
-                    {/* Duplicate so the loop is seamless: animation moves -50% = exactly one full copy */}
-                    {items}{sep}{items}
-                  </div>
-                </div>
-              );
-            })()}
+            {/* Loading overlay */}
+            {sitesLoading && (
+              <div style={{
+                position: "absolute", inset: 0, zIndex: 999,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                background: "rgba(10,0,30,0.6)", backdropFilter: "blur(4px)",
+                flexDirection: "column", gap: 8,
+              }}>
+                <div style={{ color: P.green, fontSize: 14, fontWeight: 700 }}>Connecting to Power BI…</div>
+                <div style={{ color: "rgba(255,255,255,0.5)", fontSize: 11 }}>Fetching live site data</div>
+              </div>
+            )}
 
             {/* Legend */}
             <div style={{
@@ -546,10 +633,7 @@ export default function Dashboard() {
                 { color: P.red,    label: "OFF-AIR" },
               ].map(({ color, label }) => (
                 <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{
-                    width: 9, height: 9, borderRadius: "50%", background: color,
-                    boxShadow: `0 0 6px ${color}`,
-                  }} />
+                  <div style={{ width: 9, height: 9, borderRadius: "50%", background: color, boxShadow: `0 0 6px ${color}` }} />
                   <span style={{ fontSize: 10, fontWeight: 600, color: "#fff" }}>{label}</span>
                 </div>
               ))}
@@ -561,10 +645,10 @@ export default function Dashboard() {
           {/* Site class cards */}
           <div style={{ display: "flex", flexDirection: "column", gap: 6, overflow: "hidden" }}>
             {[
-              { label: "VVVIP SITES",  count: 3,                 gradient: `linear-gradient(160deg, #8B0000 0%, #C0392B 100%)` },
-              { label: "VVIP SITES",   count: 7,                 gradient: `linear-gradient(160deg, ${P.purpleDark} 0%, ${P.purple} 100%)` },
-              { label: "VIP SITES",    count: 15,                gradient: `linear-gradient(160deg, #1565C0 0%, #1E88E5 100%)` },
-              { label: "NORMAL SITES", count: totalSites - 25,   gradient: `linear-gradient(160deg, #2E7D32 0%, ${P.green} 100%)` },
+              { label: "VVVIP SITES",  count: kpis?.sites.vvvip  ?? 0, gradient: `linear-gradient(160deg, #8B0000 0%, #C0392B 100%)` },
+              { label: "VVIP SITES",   count: kpis?.sites.vvip   ?? 0, gradient: `linear-gradient(160deg, ${P.purpleDark} 0%, ${P.purple} 100%)` },
+              { label: "VIP SITES",    count: kpis?.sites.vip    ?? 0, gradient: `linear-gradient(160deg, #1565C0 0%, #1E88E5 100%)` },
+              { label: "NORMAL SITES", count: kpis?.sites.normal ?? 0, gradient: `linear-gradient(160deg, #2E7D32 0%, ${P.green} 100%)` },
             ].map((item) => (
               <ClassCard key={item.label} {...item} />
             ))}
@@ -591,7 +675,7 @@ export default function Dashboard() {
               textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 2 }}>
               Overall Availability
             </div>
-            <Gauge value={overallAvail} label="" size={125} />
+            <Gauge value={activeAvail} label="" size={125} />
             <div style={{ display: "flex", justifyContent: "space-between", width: "100%",
               fontSize: 10, color: P.textMuted, marginTop: -4, padding: "0 4px" }}>
               <span style={{ color: P.red, fontWeight: 600 }}>0%</span>
@@ -610,11 +694,13 @@ export default function Dashboard() {
           <div style={{ display: "flex", flexDirection: "column", gap: 4,
             borderTop: `1px solid ${P.grey}`, paddingTop: 6, flex: 1 }}>
             {[
-              { label: "2G Down Sites",      value: offlineSites > 0 ? Math.ceil(offlineSites * 0.2)  : 0, accent: P.purple },
-              { label: "4G Down Sites",      value: offlineSites > 0 ? Math.ceil(offlineSites * 0.5)  : 0, accent: P.purple },
-              { label: "5G Down Sites",      value: offlineSites > 0 ? Math.floor(offlineSites * 0.3) : 0, accent: P.purple },
-              { label: "Total Outage Tickets", value: openTickets.length,  accent: P.red },
-              { label: "Power Tickets",        value: powerTickets.length, accent: P.orange },
+              { label: "Total Sites",          value: totalSites,                       accent: P.purple },
+              { label: "ON-AIR Sites",          value: onAirSites,                      accent: P.green  },
+              { label: "OFF-AIR Sites",         value: offAirSites,                     accent: P.red    },
+              { label: "Power Tickets (Open)",  value: kpis?.power.open   ?? "…",       accent: P.orange },
+              { label: "Telecom Tickets (Open)",value: kpis?.telecom.open ?? "…",       accent: P.purple },
+              { label: "Critical Power TTs",    value: kpis?.power.critical ?? "…",    accent: P.red    },
+              { label: "Critical Telecom TTs",  value: kpis?.telecom.critical ?? "…",  accent: P.red    },
             ].map(({ label, value, accent }) => (
               <KpiRow key={label} label={label} value={value} accent={accent} />
             ))}
@@ -628,11 +714,20 @@ export default function Dashboard() {
         gap: 6, padding: "0 6px 6px",
         height: 192, flexShrink: 0, overflow: "hidden",
       }}>
-        <TicketTable title="Running Power Outage Tickets"       tickets={powerTickets}  accent={P.orange} />
-        <TicketTable title="Running Telecom (NSA) Outage Tickets" tickets={telecomTickets} accent={P.purple} />
+        <TicketTable
+          title="Running Power Outage Tickets"
+          tickets={filteredPower}
+          accent={P.orange}
+          loading={powerLoading}
+        />
+        <TicketTable
+          title="Running Telecom (NSA) Outage Tickets"
+          tickets={filteredTelecom}
+          accent={P.purple}
+          loading={telecomLoading}
+        />
       </div>
 
-      {/* CSS for live-pulse animation */}
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; box-shadow: 0 0 8px #00C878; }
