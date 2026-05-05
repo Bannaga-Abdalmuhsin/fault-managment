@@ -437,7 +437,7 @@ export default function Dashboard() {
         <div style={{ position: "absolute", top: 36, left: "50%", transform: "translateX(-50%)",
           zIndex: 950, pointerEvents: "none" }}>
           <img src="/hajj-icon-nobg.png" alt="Hajj"
-            style={{ height: 90, objectFit: "contain",
+            style={{ height: 270, objectFit: "contain",
               filter: "brightness(2.2) sepia(0.3) saturate(2.2) drop-shadow(0 2px 12px rgba(0,0,0,0.7))" }} />
         </div>
 
