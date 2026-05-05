@@ -434,7 +434,7 @@ export default function Dashboard() {
         <Map3D sites={mapSites} areaFilter="WR-HAJJ" />
 
         {/* ── Hajj icon — top-center map overlay ───────────────────────── */}
-        <div style={{ position: "absolute", top: 36, left: "50%", transform: "translateX(-50%)",
+        <div style={{ position: "absolute", top: 28, left: "50%", transform: "translateX(-50%)",
           zIndex: 950, pointerEvents: "none" }}>
           <img src="/hajj-icon-nobg.png" alt="Hajj"
             style={{ height: 270, objectFit: "contain",
