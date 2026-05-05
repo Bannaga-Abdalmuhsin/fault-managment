@@ -530,23 +530,23 @@ export default function Dashboard() {
           <GaugeSvg value={overallAvail} size={178} />
         </Glass>
 
-        {/* ── RIGHT: KPI panel (below gauge) ──────────────────────────────── */}
-        <Glass style={{ position: "absolute", top: 192, bottom: 26, right: 10, zIndex: 900,
-          width: 228, padding: "8px 12px",
-          display: "flex", flexDirection: "column", gap: 3 }}>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3,
-            justifyContent: "space-evenly", overflowY: "hidden" }}>
-            {[
-              { label: "Total Sites",            value: totalSites,                     accent: "#fff"    },
-              { label: "Power Tickets (Open)",   value: kpis?.power.open    ?? "…",    accent: P.orange  },
-              { label: "Telecom Tickets (Open)", value: kpis?.telecom.open  ?? "…",    accent: "#C792FF" },
-              { label: "Critical Power TTs",     value: kpis?.power.critical    ?? "…",accent: P.red     },
-              { label: "Critical Telecom TTs",   value: kpis?.telecom.critical  ?? "…",accent: P.red     },
-            ].map(({ label, value, accent }) => (
-              <KpiRow key={label} label={label} value={value} accent={accent} />
-            ))}
-          </div>
-        </Glass>
+        {/* ── RIGHT: KPI cards (below gauge, one card each) ───────────────── */}
+        <div style={{ position: "absolute", top: 198, right: 10, zIndex: 900,
+          width: 228, display: "flex", flexDirection: "column", gap: 6 }}>
+          {[
+            { label: "Total Sites",            value: totalSites,                     accent: "#fff"    },
+            { label: "Power Tickets (Open)",   value: kpis?.power.open    ?? "…",    accent: P.orange  },
+            { label: "Telecom Tickets (Open)", value: kpis?.telecom.open  ?? "…",    accent: "#C792FF" },
+            { label: "Critical Power TTs",     value: kpis?.power.critical    ?? "…",accent: P.red     },
+            { label: "Critical Telecom TTs",   value: kpis?.telecom.critical  ?? "…",accent: P.red     },
+          ].map(({ label, value, accent }) => (
+            <Glass key={label} style={{ padding: "10px 14px",
+              display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.82)", fontWeight: 500 }}>{label}</span>
+              <span style={{ fontSize: 18, fontWeight: 900, color: accent, lineHeight: 1 }}>{value}</span>
+            </Glass>
+          ))}
+        </div>
 
         {/* ── Map legend (bottom-left, above Leaflet attribution) ────────── */}
         <Glass style={{ position: "absolute", bottom: 26, left: 10, zIndex: 900,
