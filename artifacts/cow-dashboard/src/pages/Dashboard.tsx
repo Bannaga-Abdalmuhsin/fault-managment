@@ -18,6 +18,45 @@ const P = {
   glassBorder: "rgba(200, 140, 255, 0.28)",
 };
 
+// ─── Hajj 1447 area → site mapping (from reference data) ──────────────────────
+const SITE_AREA: Record<string, string> = {
+  // Arafat (37)
+  CWN022:"Arafat", CWN996:"Arafat", CWN092:"Arafat", CWN080:"Arafat",
+  CWN960:"Arafat", CWN984:"Arafat", CWN076:"Arafat", CWN073:"Arafat",
+  CWN038:"Arafat", CWN923:"Arafat", CWN072:"Arafat", CWN901:"Arafat",
+  CWN020:"Arafat", CWN036:"Arafat", CWN085:"Arafat", CWN084:"Arafat",
+  CWN087:"Arafat", CWN075:"Arafat", CWN015:"Arafat", CWN078:"Arafat",
+  CWN083:"Arafat", CWN203:"Arafat", CWN212:"Arafat", CWN903:"Arafat",
+  CWN906:"Arafat", CWN914:"Arafat", CWN951:"Arafat", CWN956:"Arafat",
+  CWN980:"Arafat", CWN991:"Arafat", CWN050:"Arafat", CWN093:"Arafat",
+  CWN001:"Arafat", CWN108:"Arafat", CWN008:"Arafat", CWN105:"Arafat",
+  CWN102:"Arafat",
+  // Muzdalifah (29)
+  CWN213:"Muzdalifah", CWN208:"Muzdalifah", CWN099:"Muzdalifah",
+  CWN955:"Muzdalifah", CWN062:"Muzdalifah", CWN907:"Muzdalifah",
+  CWN101:"Muzdalifah", CWN915:"Muzdalifah", CWN997:"Muzdalifah",
+  CWH318:"Muzdalifah", CWN922:"Muzdalifah", CWN300:"Muzdalifah",
+  CWN992:"Muzdalifah", CWN206:"Muzdalifah", CWN205:"Muzdalifah",
+  CWN004:"Muzdalifah", CWN068:"Muzdalifah", CWN074:"Muzdalifah",
+  CWN089:"Muzdalifah", CWN202:"Muzdalifah", CWN214:"Muzdalifah",
+  CWN301:"Muzdalifah", CWN079:"Muzdalifah", CWN032:"Muzdalifah",
+  CWN972:"Muzdalifah", CWN211:"Muzdalifah", CWN104:"Muzdalifah",
+  CWN021:"Muzdalifah", CWN066:"Muzdalifah",
+  // Mina (10)
+  CWN970:"Mina", CWN959:"Mina", CWN961:"Mina", CWN002:"Mina",
+  CWN201:"Mina", CWN777:"Mina", CWN953:"Mina", CWN976:"Mina",
+  CWN978:"Mina", CWN994:"Mina",
+  // Hajj Support (15)
+  COW761:"Hajj Support", CWN026:"Hajj Support", CWN053:"Hajj Support",
+  CWN950:"Hajj Support", CWN962:"Hajj Support", COWTR01:"Hajj Support",
+  COW062:"Hajj Support", COW514:"Hajj Support", COW539:"Hajj Support",
+  COW610:"Hajj Support", COW666:"Hajj Support", COWTR02:"Hajj Support",
+  COW780:"Hajj Support", COW762:"Hajj Support", CWN103:"Hajj Support",
+  // Makka Remote (Miqat Alssail + Behaitah Checkpoint + Shoaibah Checkpoints)
+  CWN967:"Makka Remote", CWN998:"Makka Remote", CWN081:"Makka Remote",
+};
+const AREA_LIST = ["Arafat","Muzdalifah","Mina","Hajj Support","Makka Remote"] as const;
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface PbiSite {
   id: string; name: string; region: string; zone: string;
@@ -308,17 +347,41 @@ const dotC  = (v: number)               => v >= 95 ? P.green : v >= 80 ? P.orang
 export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState("Open");
   const [cowIdFilter,  setCowIdFilter]  = useState("All");
+  const [areaFilter,   setAreaFilter]   = useState<string | null>(null);
 
   const clock   = useClock();
   const dateStr = clock.toLocaleDateString("en-GB",  { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = clock.toLocaleTimeString("en-GB",  { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
   const { data: pbiSites,   loading: sitesLoading }   = usePbi<PbiSite[]>("/pbi/sites",           60_000);
-  const { data: pbiZones  }                            = usePbi<PbiZone[]>("/pbi/zones",           60_000);
-  const { data: pbiChains }                            = usePbi<{chain:string;total:number;onAir:number}[]>("/pbi/chains", 60_000);
   const { data: powerTix,   loading: powerLoading }   = usePbi<PbiTicket[]>("/pbi/tickets/power",  60_000);
   const { data: telecomTix, loading: telecomLoading } = usePbi<PbiTicket[]>("/pbi/tickets/telecom", 60_000);
   const { data: kpis }                                = usePbi<PbiKpis>("/pbi/kpis",              60_000);
+
+  // ── Area-filtered sites ────────────────────────────────────────────────────
+  const areaSites = useMemo(() => {
+    const sites = pbiSites ?? [];
+    return areaFilter ? sites.filter(s => SITE_AREA[s.name] === areaFilter) : sites;
+  }, [pbiSites, areaFilter]);
+
+  // ── Area classification rows — computed from pbiSites ─────────────────────
+  const areaRows = useMemo(() => {
+    const sites = pbiSites ?? [];
+    return AREA_LIST.map(area => {
+      const s = sites.filter(x => SITE_AREA[x.name] === area);
+      return { label: area, total: s.length, onAir: s.filter(x => x.status === "operational").length };
+    });
+  }, [pbiSites]);
+
+  // ── Availability ───────────────────────────────────────────────────────────
+  const overallAvail = kpis?.sites.availability ?? 100;
+  const areaAvail = useMemo(() => {
+    if (!areaFilter || areaSites.length === 0) return overallAvail;
+    const on = areaSites.filter(s => s.status === "operational").length;
+    return Math.round((on / areaSites.length) * 1000) / 10;
+  }, [areaFilter, areaSites, overallAvail]);
+
+  const totalSites = areaFilter ? areaSites.length : (kpis?.sites.total ?? 0);
 
   // ── Map sites ──────────────────────────────────────────────────────────────
   const mapSites = useMemo(() => {
@@ -328,7 +391,7 @@ export default function Dashboard() {
     const openNsa = new Set(
       (telecomTix ?? []).filter(t => t.status !== "closed").map(t => t.siteName)
     );
-    return (pbiSites ?? [])
+    return areaSites
       .filter(s => s.latitude != null && s.longitude != null)
       .filter(s => cowIdFilter === "All" || s.name === cowIdFilter)
       .map((s, i) => ({
@@ -338,43 +401,21 @@ export default function Dashboard() {
         hasPowerTicket: openPower.has(s.name),
         hasNsaTicket:   openNsa.has(s.name),
       }));
-  }, [pbiSites, cowIdFilter, powerTix, telecomTix]);
+  }, [areaSites, cowIdFilter, powerTix, telecomTix]);
 
-  // ── Ticket filtering ───────────────────────────────────────────────────────
+  // ── Ticket filtering (area + status) ──────────────────────────────────────
+  const areaNames = useMemo(() => new Set(areaSites.map(s => s.name)), [areaSites]);
   const fTix = (tix: PbiTicket[] | null) =>
-    (tix ?? []).filter(t => statusFilter === "Closed" ? t.status === "closed" : t.status !== "closed");
-  const filteredPower   = useMemo(() => fTix(powerTix),   [powerTix,   statusFilter]);
-  const filteredTelecom = useMemo(() => fTix(telecomTix), [telecomTix, statusFilter]);
-
-  // ── Zone data — use actual districts from API, grouped for display ────────
-  const zoneRows = useMemo(() => {
-    const all = pbiZones ?? [];
-    // Merge sub-zones (e.g. "MAKKAH" + "MAKKAH _ P0") into clean display names
-    const merge = (keys: string[], label: string) => {
-      const matched = all.filter(z => keys.some(k => z.district?.toLowerCase().includes(k)));
-      const total   = matched.reduce((s, z) => s + z.total, 0);
-      const onAir   = matched.reduce((s, z) => s + z.onAir, 0);
-      return { label, total, onAir };
-    };
-    return [
-      merge(["makkah"],  "Makkah"),
-      merge(["jeddah"],  "Jeddah"),
-      merge(["taif"],    "Taif"),
-      merge(["mina"],    "Mina"),
-      merge(["muzdalif"],"Muzdalifa"),
-      merge(["arafat"],  "Arafat"),
-    ].filter(z => z.total > 0);   // only show zones that have sites
-  }, [pbiZones]);
-
-  const totalSites  = kpis?.sites.total   ?? 0;
-  const onAirSites  = kpis?.sites.onAir   ?? 0;
-  const offAirSites = kpis?.sites.offAir  ?? 0;
-  const overallAvail = kpis?.sites.availability ?? 100;
+    (tix ?? [])
+      .filter(t => !areaFilter || areaNames.has(t.siteName))
+      .filter(t => statusFilter === "Closed" ? t.status === "closed" : t.status !== "closed");
+  const filteredPower   = useMemo(() => fTix(powerTix),   [powerTix,   statusFilter, areaFilter, areaNames]);
+  const filteredTelecom = useMemo(() => fTix(telecomTix), [telecomTix, statusFilter, areaFilter, areaNames]);
 
   // ── Ticker ─────────────────────────────────────────────────────────────────
   const tickerItems = [
-    { label: "Hajj Overall", val: overallAvail },
-    ...zoneRows.map(z => ({ label: z.label, val: avail(z.onAir, z.total) })),
+    { label: "Hajj Overall", val: areaAvail },
+    ...areaRows.map(z => ({ label: z.label, val: avail(z.onAir, z.total) })),
   ];
   const sep = <span style={{ margin: "0 16px", opacity: 0.25 }}>|</span>;
   const mkTicker = (pfx: string) => tickerItems.map(({ label, val }, i) => (
@@ -387,16 +428,6 @@ export default function Dashboard() {
       {i < tickerItems.length - 1 && sep}
     </span>
   ));
-
-  // ── Chain cards — ordered list of known Hajj area chains ─────────────────
-  const CHAIN_ORDER = ["Arafat","Muzdalifah","Mina","Makka Remote","Hajj Support"];
-  const chainCards = useMemo(() => {
-    const all = pbiChains ?? [];
-    return CHAIN_ORDER.map(name => {
-      const found = all.find(c => c.chain?.toLowerCase() === name.toLowerCase());
-      return { label: name, total: found?.total ?? null, onAir: found?.onAir ?? null };
-    });
-  }, [pbiChains]);
 
   return (
     <div style={{ width: "100vw", height: "100vh",
@@ -439,7 +470,7 @@ export default function Dashboard() {
 
       {/* ══ MAP (full width) ══════════════════════════════════════════════════ */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        <Map3D sites={mapSites} areaFilter="WR-HAJJ" />
+        <Map3D sites={mapSites} areaFilter={areaFilter ?? "All"} />
 
         {/* ── Hajj + Kaaba icons — top-center map overlay ──────────────── */}
         {/* At h=140: hajj transparent-top=45px, kaaba=15px; container top=-(45-28)=-17 */}
@@ -514,39 +545,42 @@ export default function Dashboard() {
           {/* Divider */}
           <div style={{ height: 1, background: "rgba(200,140,255,0.2)", margin: "0 -2px" }} />
 
-          {/* Zone availability bars — dynamic from PBI data */}
+          {/* Area Classification — clickable filter cards with availability bar */}
           <div>
-            <SLabel text="Zone Availability" />
-            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-              {zoneRows.length === 0
-                ? <div style={{ fontSize: 9, color: "rgba(255,255,255,0.4)" }}>Loading zones…</div>
-                : zoneRows.map(z => (
-                    <ZoneBar key={z.label} label={z.label} total={z.total} onAir={z.onAir} />
-                  ))}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+              <SLabel text="Area Classification" />
+              {areaFilter && (
+                <button onClick={() => setAreaFilter(null)} style={{
+                  fontSize: 9, padding: "1px 8px", borderRadius: 10, cursor: "pointer",
+                  border: "1px solid rgba(200,140,255,0.45)", background: "rgba(200,140,255,0.15)",
+                  color: "rgba(200,140,255,0.95)" }}>All</button>
+              )}
             </div>
-          </div>
-
-          {/* Divider */}
-          <div style={{ height: 1, background: "rgba(200,140,255,0.2)", margin: "0 -2px" }} />
-
-          {/* Classification / chain area cards */}
-          <div>
-            <SLabel text="Area Classification" />
             <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-              {chainCards.map(({ label, total, onAir }) => {
-                const pct = total && onAir != null ? Math.round((onAir / total) * 100) : null;
-                const col = pct == null ? "rgba(255,255,255,0.25)" : pct >= 95 ? P.green : pct >= 80 ? P.orange : P.red;
+              {areaRows.map(({ label, total, onAir }) => {
+                const pct = total ? Math.round((onAir / total) * 100) : 0;
+                const col = total === 0 ? "rgba(255,255,255,0.25)" : pct >= 95 ? P.green : pct >= 80 ? P.orange : P.red;
+                const active = areaFilter === label;
                 return (
-                  <div key={label} style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    background: "rgba(255,255,255,0.06)", borderRadius: 7,
-                    border: "1px solid rgba(200,140,255,0.15)", padding: "5px 8px" }}>
-                    <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.82)", flex: 1 }}>{label}</span>
-                    <span style={{ fontSize: 11, fontWeight: 900, color: col, minWidth: 28, textAlign: "right" }}>
-                      {total == null ? "…" : total}
-                    </span>
-                    <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginLeft: 2 }}>sites</span>
-                  </div>
+                  <button key={label} onClick={() => setAreaFilter(active ? null : label)} style={{
+                    width: "100%", textAlign: "left", cursor: "pointer",
+                    background: active ? "rgba(107,31,162,0.6)" : "rgba(255,255,255,0.06)",
+                    borderRadius: 7, padding: "5px 8px",
+                    border: active ? `1px solid ${P.glassBorder}` : "1px solid rgba(200,140,255,0.15)",
+                    boxShadow: active ? "0 0 10px rgba(107,31,162,0.55)" : "none" }}>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <span style={{ fontSize: 10, fontWeight: 600,
+                        color: active ? "#fff" : "rgba(255,255,255,0.82)" }}>{label}</span>
+                      <span style={{ fontSize: 11, fontWeight: 900, color: col }}>
+                        {onAir}<span style={{ fontSize: 9, color: "rgba(255,255,255,0.35)",
+                          fontWeight: 400 }}>/{total}</span>
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 3, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.1)" }}>
+                      <div style={{ height: "100%", borderRadius: 2, background: col,
+                        width: total ? `${pct}%` : "0%", transition: "width 0.5s" }} />
+                    </div>
+                  </button>
                 );
               })}
             </div>
@@ -557,18 +591,17 @@ export default function Dashboard() {
         <Glass style={{ position: "absolute", top: 36, right: 10, zIndex: 900,
           width: 228, padding: "6px 10px 6px",
           display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <GaugeSvg value={overallAvail} size={178} />
+          <GaugeSvg value={areaAvail} size={178} />
         </Glass>
 
         {/* ── RIGHT: KPI cards (below gauge, one card each) ───────────────── */}
         <div style={{ position: "absolute", top: 198, right: 10, zIndex: 900,
           width: 228, display: "flex", flexDirection: "column", gap: 6 }}>
           {[
-            { label: "Total Sites",            value: totalSites,                     accent: "#fff"    },
-            { label: "Power Tickets (Open)",   value: kpis?.power.open    ?? "…",    accent: P.orange  },
-            { label: "Telecom Tickets (Open)", value: kpis?.telecom.open  ?? "…",    accent: "#C792FF" },
-            { label: "Critical Power TTs",     value: kpis?.power.critical    ?? "…",accent: P.red     },
-            { label: "Critical Telecom TTs",   value: kpis?.telecom.critical  ?? "…",accent: P.red     },
+            { label: "Total Sites",            value: totalSites,            accent: "#fff"   },
+            { label: "Power Tickets (Open)",   value: filteredPower.length,  accent: P.orange },
+            { label: "Telecom Tickets (Open)", value: filteredTelecom.length,accent: "#C792FF"},
+            { label: "Critical Power TTs",     value: kpis?.power.critical ?? "…", accent: P.red },
           ].map(({ label, value, accent }) => (
             <Glass key={label} style={{ padding: "10px 14px",
               display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -581,7 +614,7 @@ export default function Dashboard() {
         {/* ── Map legend (bottom-left, above Leaflet attribution) ────────── */}
         <Glass style={{ position: "absolute", bottom: 26, left: 10, zIndex: 900,
           padding: "7px 12px", display: "flex", flexDirection: "column", gap: 5 }}>
-          {[{ color: P.green, label: "ON-AIR" }, { color: P.orange, label: "Degraded" }, { color: P.red, label: "OFF-AIR" }]
+          {[{ color: "#00C878", label: "Operational" }, { color: P.orange, label: "NSA Ticket" }, { color: P.red, label: "Power Outage" }]
             .map(({ color, label }) => (
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 7 }}>
                 <div style={{ width: 9, height: 9, borderRadius: "50%",

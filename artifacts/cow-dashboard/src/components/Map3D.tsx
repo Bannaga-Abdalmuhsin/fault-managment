@@ -24,12 +24,12 @@ interface Map3DProps {
 
 // Center/zoom per area
 const AREA_VIEWS: Record<string, { center: [number, number]; zoom: number }> = {
-  All: { center: [21.38, 39.93], zoom: 10.5 },
-  Arafat: { center: [21.357, 39.972], zoom: 12.8 },
-  Mina: { center: [21.412, 39.898], zoom: 13 },
-  Muzdalifah: { center: [21.384, 39.912], zoom: 12.8 },
-  Haram: { center: [21.422, 39.826], zoom: 13.5 },
-  "Makkah Remote": { center: [21.55, 39.4], zoom: 9.5 },
+  All:             { center: [21.38,  39.93],  zoom: 10.5 },
+  Arafat:          { center: [21.357, 39.972], zoom: 12.8 },
+  Mina:            { center: [21.412, 39.898], zoom: 13   },
+  Muzdalifah:      { center: [21.384, 39.912], zoom: 12.8 },
+  "Hajj Support":  { center: [21.45,  39.75],  zoom: 10   },
+  "Makka Remote":  { center: [21.42,  39.93],  zoom: 9    },
 };
 
 // Detect WebGL support
