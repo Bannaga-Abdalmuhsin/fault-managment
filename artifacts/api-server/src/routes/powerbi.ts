@@ -338,6 +338,65 @@ router.get("/pbi/kpis", async (req, res) => {
   }
 });
 
+// ─── /api/pbi/chains ─────────────────────────────────────────────────────────
+// Returns site count per Hajj area (DB[Column13]) for WR-HAJJ sites.
+// DB[Column13] holds: "Arafat", "Muzdalifah", "Mina", "Haram", "Supporting HAJJ Site"
+const AREA_DISPLAY: Record<string, string> = {
+  "supporting hajj site": "Hajj Support",
+  "haram":               "Makka Remote",
+  "muzdalifah":          "Muzdalifah",
+};
+function normalizeArea(raw: string): string {
+  return AREA_DISPLAY[raw.toLowerCase().trim()] ?? raw;
+}
+
+router.get("/pbi/chains", async (req, res) => {
+  try {
+    const rows = await dax(`
+      EVALUATE
+      SUMMARIZECOLUMNS(
+        DB[Column13],
+        FILTER(DB, DB[Region] = "WR-HAJJ"),
+        "total", COUNTROWS(DB),
+        "onAir", CALCULATE(COUNTROWS(DB), DB[MSC ID] = "ON-AIR")
+      )
+    `);
+    const areas = rows.map((r: any) => ({
+      chain: normalizeArea(String(r["DB[Column13]"] ?? r["[Column13]"] ?? "Unknown")),
+      total: Number(r["[total]"] ?? 0),
+      onAir: Number(r["[onAir]"]  ?? 0),
+    }));
+    res.json(areas);
+  } catch (err: any) {
+    logger.error({ err }, "PBI chains error");
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── /api/pbi/chains/debug ───────────────────────────────────────────────────
+router.get("/pbi/chains/debug", async (req, res) => {
+  try {
+    const [colRows, col13Rows] = await Promise.all([
+      dax(`EVALUATE TOPN(1, FILTER(DB, DB[Region] = "WR-HAJJ"))`),
+      dax(`
+        EVALUATE
+        SUMMARIZECOLUMNS(
+          DB[Column13],
+          FILTER(DB, DB[Region] = "WR-HAJJ"),
+          "total", COUNTROWS(DB)
+        )
+      `),
+    ]);
+    res.json({
+      columns: colRows.length > 0 ? Object.keys(colRows[0]) : [],
+      col13Values: col13Rows,
+      sample: colRows[0],
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── helpers ─────────────────────────────────────────────────────────────────
 function mapStatus(s: string | null): string {
   if (!s) return "open";

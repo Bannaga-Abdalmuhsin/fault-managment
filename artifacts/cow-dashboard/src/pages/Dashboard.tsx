@@ -307,31 +307,30 @@ const dotC  = (v: number)               => v >= 95 ? P.green : v >= 80 ? P.orang
 // ─── Main dashboard ───────────────────────────────────────────────────────────
 export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState("Open");
-  const [classFilter,  setClassFilter]  = useState("All");
   const [cowIdFilter,  setCowIdFilter]  = useState("All");
 
   const clock   = useClock();
   const dateStr = clock.toLocaleDateString("en-GB",  { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = clock.toLocaleTimeString("en-GB",  { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-  const { data: pbiSites,   loading: sitesLoading }   = usePbi<PbiSite[]>("/pbi/sites",          60_000);
-  const { data: pbiZones  }                            = usePbi<PbiZone[]>("/pbi/zones",          60_000);
-  const { data: powerTix,   loading: powerLoading }   = usePbi<PbiTicket[]>("/pbi/tickets/power", 60_000);
-  const { data: telecomTix, loading: telecomLoading } = usePbi<PbiTicket[]>("/pbi/tickets/telecom",60_000);
-  const { data: kpis }                                = usePbi<PbiKpis>("/pbi/kpis",             60_000);
+  const { data: pbiSites,   loading: sitesLoading }   = usePbi<PbiSite[]>("/pbi/sites",           60_000);
+  const { data: pbiZones  }                            = usePbi<PbiZone[]>("/pbi/zones",           60_000);
+  const { data: pbiChains }                            = usePbi<{chain:string;total:number;onAir:number}[]>("/pbi/chains", 60_000);
+  const { data: powerTix,   loading: powerLoading }   = usePbi<PbiTicket[]>("/pbi/tickets/power",  60_000);
+  const { data: telecomTix, loading: telecomLoading } = usePbi<PbiTicket[]>("/pbi/tickets/telecom", 60_000);
+  const { data: kpis }                                = usePbi<PbiKpis>("/pbi/kpis",              60_000);
 
   // ── Map sites ──────────────────────────────────────────────────────────────
   const mapSites = useMemo(() =>
     (pbiSites ?? [])
       .filter(s => s.latitude != null && s.longitude != null)
-      .filter(s => classFilter === "All" || s.siteLabel === classFilter)
       .filter(s => cowIdFilter === "All" || s.name === cowIdFilter)
       .map((s, i) => ({
         id: i as unknown as number, name: s.name, zone: s.zone ?? "Hajj",
         status: s.status, latitude: s.latitude!, longitude: s.longitude!,
         siteClass: s.siteLabel,
       })),
-  [pbiSites, classFilter, cowIdFilter]);
+  [pbiSites, cowIdFilter]);
 
   // ── Ticket filtering ───────────────────────────────────────────────────────
   const fTix = (tix: PbiTicket[] | null) =>
@@ -381,7 +380,15 @@ export default function Dashboard() {
     </span>
   ));
 
-  const classOpts = ["All", "VVVIP", "VVIP", "VIP", "Normal"];
+  // ── Chain cards — ordered list of known Hajj area chains ─────────────────
+  const CHAIN_ORDER = ["Arafat","Muzdalifah","Mina","Makka Remote","Hajj Support"];
+  const chainCards = useMemo(() => {
+    const all = pbiChains ?? [];
+    return CHAIN_ORDER.map(name => {
+      const found = all.find(c => c.chain?.toLowerCase() === name.toLowerCase());
+      return { label: name, total: found?.total ?? null, onAir: found?.onAir ?? null };
+    });
+  }, [pbiChains]);
 
   return (
     <div style={{ width: "100vw", height: "100vh",
@@ -474,16 +481,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Classification */}
-          <div>
-            <SLabel text="Classification" />
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-              {classOpts.map(c => (
-                <FilterBtn key={c} label={c} active={classFilter === c} onClick={() => setClassFilter(c)} />
-              ))}
-            </div>
-          </div>
-
           {/* Divider */}
           <div style={{ height: 1, background: "rgba(200,140,255,0.2)", margin: "0 -2px" }} />
 
@@ -496,6 +493,32 @@ export default function Dashboard() {
                 : zoneRows.map(z => (
                     <ZoneBar key={z.label} label={z.label} total={z.total} onAir={z.onAir} />
                   ))}
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: "rgba(200,140,255,0.2)", margin: "0 -2px" }} />
+
+          {/* Classification / chain area cards */}
+          <div>
+            <SLabel text="Area Classification" />
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {chainCards.map(({ label, total, onAir }) => {
+                const pct = total && onAir != null ? Math.round((onAir / total) * 100) : null;
+                const col = pct == null ? "rgba(255,255,255,0.25)" : pct >= 95 ? P.green : pct >= 80 ? P.orange : P.red;
+                return (
+                  <div key={label} style={{
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    background: "rgba(255,255,255,0.06)", borderRadius: 7,
+                    border: "1px solid rgba(200,140,255,0.15)", padding: "5px 8px" }}>
+                    <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.82)", flex: 1 }}>{label}</span>
+                    <span style={{ fontSize: 11, fontWeight: 900, color: col, minWidth: 28, textAlign: "right" }}>
+                      {total == null ? "…" : total}
+                    </span>
+                    <span style={{ fontSize: 9, color: "rgba(255,255,255,0.3)", marginLeft: 2 }}>sites</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </Glass>
@@ -514,17 +537,11 @@ export default function Dashboard() {
           <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 3,
             justifyContent: "space-evenly", overflowY: "hidden" }}>
             {[
-              { label: "Total Sites",           value: totalSites,                    accent: "#fff"    },
-              { label: "ON-AIR Sites",          value: onAirSites,                    accent: P.green   },
-              { label: "OFF-AIR Sites",         value: offAirSites,                   accent: P.red     },
-              { label: "VVVIP Sites",           value: kpis?.sites.vvvip  ?? "…",    accent: "#FF6B6B" },
-              { label: "VVIP Sites",            value: kpis?.sites.vvip   ?? "…",    accent: "#C792FF" },
-              { label: "VIP Sites",             value: kpis?.sites.vip    ?? "…",    accent: "#60B0FF" },
-              { label: "Normal Sites",          value: kpis?.sites.normal ?? "…",    accent: P.green   },
-              { label: "Power Tickets (Open)",  value: kpis?.power.open   ?? "…",    accent: P.orange  },
-              { label: "Telecom Tickets (Open)",value: kpis?.telecom.open ?? "…",    accent: "#C792FF" },
-              { label: "Critical Power TTs",    value: kpis?.power.critical   ?? "…",accent: P.red     },
-              { label: "Critical Telecom TTs",  value: kpis?.telecom.critical ?? "…",accent: P.red     },
+              { label: "Total Sites",            value: totalSites,                     accent: "#fff"    },
+              { label: "Power Tickets (Open)",   value: kpis?.power.open    ?? "…",    accent: P.orange  },
+              { label: "Telecom Tickets (Open)", value: kpis?.telecom.open  ?? "…",    accent: "#C792FF" },
+              { label: "Critical Power TTs",     value: kpis?.power.critical    ?? "…",accent: P.red     },
+              { label: "Critical Telecom TTs",   value: kpis?.telecom.critical  ?? "…",accent: P.red     },
             ].map(({ label, value, accent }) => (
               <KpiRow key={label} label={label} value={value} accent={accent} />
             ))}
