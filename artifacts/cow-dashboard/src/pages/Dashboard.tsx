@@ -188,25 +188,42 @@ function TableShell({ title, accent, count, loading, cols, children }: {
   );
 }
 
-// ─── Power ticket row ──────────────────────────────────────────────────────────
+// SLA thresholds
+const POWER_SLA_MIN = 480;    // 8 hours for power outage (SIR)
+const NSA_SLA_MIN   = 2160;   // 36 hours for NSA (Input Record)
+
+// ─── Power ticket row (SIR data) ───────────────────────────────────────────────
 function PowerTicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
-  const pColor = ticket.priority === "critical" ? P.red : ticket.priority === "high" ? P.orange : "rgba(255,255,255,0.55)";
+  const salNum   = ticket.durationMin != null ? POWER_SLA_MIN - ticket.durationMin : null;
+  const salColor = salNum === null ? "rgba(255,255,255,0.55)"
+    : salNum < 0 ? P.red : salNum < 60 ? P.orange : P.green;
+  const district = (ticket as any).area || ticket.district || "MAKKAH";
+  const physical = (ticket.chain !== undefined && ticket.chain !== "") ? ticket.chain : "1";
   return (
     <tr style={{ background: idx % 2 === 0 ? "rgba(255,255,255,0.05)" : "transparent" }}>
       <td style={{ ...TD_STYLE, fontWeight: 700, color: "#fff", whiteSpace: "nowrap" }}>{ticket.siteId}</td>
-      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{(ticket as any).chain ?? "—"}</td>
-      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{(ticket as any).district ?? "—"}</td>
-      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{ticket.siteLabel ?? "—"}</td>
-      <td style={{ ...TD_STYLE, fontWeight: 700, color: pColor }}>{ticket.priority}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{physical}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{district}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{ticket.siteLabel || "—"}</td>
       <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap" }}>{ticket.totalDuration || "—"}</td>
-      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.65)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ticket.description || ticket.title || "—"}</td>
-      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.55)" }}>{ticket.assignedTo || "—"}</td>
+      <td style={{ ...TD_STYLE, color: ticket.slaBreach ? P.red : "rgba(255,255,255,0.75)",
+        whiteSpace: "nowrap", fontWeight: 600 }}>
+        {ticket.slaBreach || "—"}
+      </td>
+      <td style={{ ...TD_STYLE, fontWeight: 800, color: salColor, whiteSpace: "nowrap" }}>
+        {salNum !== null ? salNum.toLocaleString() : "—"}
+      </td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.65)", maxWidth: 140,
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {ticket.description || ticket.title || "—"}
+      </td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.55)", maxWidth: 120,
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {(ticket as any).summary || ticket.comment || ticket.actionTaken || "—"}
+      </td>
     </tr>
   );
 }
-
-// SLA threshold for power/NSA tickets: 36 hours = 2160 minutes
-const SLA_THRESHOLD_MIN = 2160;
 
 // ─── NSA ticket row ────────────────────────────────────────────────────────────
 function NsaTicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
@@ -217,7 +234,7 @@ function NsaTicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
 
   // Compute remaining SAL: threshold - elapsed (negative = breached)
   const salNum  = ticket.durationMin != null
-    ? SLA_THRESHOLD_MIN - ticket.durationMin
+    ? NSA_SLA_MIN - ticket.durationMin
     : null;
   const salColor = salNum === null ? "rgba(255,255,255,0.55)"
     : salNum < 0 ? P.red : salNum < 60 ? P.orange : P.green;
@@ -255,7 +272,7 @@ function NsaTicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
 
 // ─── Power ticket table ────────────────────────────────────────────────────────
 function PowerTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading: boolean }) {
-  const cols = ["Site ID","Chain","District","Site Label","Severity","Total Duration","Problem Description","FO Staff"];
+  const cols = ["Site","#Physical","District","Site label","Total Duration","Time to SLA Breach","Remaining SAL (Min)","Alarms Description","Comment"];
   return (
     <TableShell title="Running Power Outage Tickets" accent={P.orange}
       count={tickets.length} loading={loading} cols={cols}>
@@ -552,8 +569,8 @@ export default function Dashboard() {
       {/* ══ TICKET TABLES ════════════════════════════════════════════════════ */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6,
         padding: "0 6px 6px", height: 185, flexShrink: 0, overflow: "hidden" }}>
-        <PowerTicketTable tickets={filteredPower} loading={powerLoading} />
-        <NsaTicketTable   tickets={filteredPower} loading={powerLoading} />
+        <PowerTicketTable tickets={filteredTelecom} loading={telecomLoading} />
+        <NsaTicketTable   tickets={filteredPower}   loading={powerLoading} />
       </div>
 
       <style>{`
