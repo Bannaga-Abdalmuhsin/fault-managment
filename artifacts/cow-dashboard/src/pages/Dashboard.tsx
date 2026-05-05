@@ -408,13 +408,18 @@ export default function Dashboard() {
           <div style={{ opacity: 0.7 }}>⟳ {timeStr}</div>
         </div>
 
-        <div style={{ flex: 1, textAlign: "center" }}>
-          <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", letterSpacing: 0.5,
-            textShadow: "0 2px 16px rgba(0,0,0,0.4)" }}>
-            COW HAJJ 1447 — Interactive Status
-          </div>
-          <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.6)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
-            Live Power BI · {sitesLoading ? "…" : totalSites} Hajj sites monitored
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <img src="/hajj-icon-nobg.png" alt="Hajj"
+            style={{ height: 52, objectFit: "contain",
+              filter: "brightness(2.5) sepia(0.4) saturate(2) drop-shadow(0 0 6px rgba(255,210,80,0.7))" }} />
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+            <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", letterSpacing: 0.5,
+              textShadow: "0 2px 16px rgba(0,0,0,0.4)" }}>
+              COW HAJJ 1447 — Interactive Status
+            </div>
+            <div style={{ fontSize: 9.5, color: "rgba(255,255,255,0.6)", letterSpacing: "0.07em", textTransform: "uppercase" }}>
+              Live Power BI · {sitesLoading ? "…" : totalSites} Hajj sites monitored
+            </div>
           </div>
         </div>
 
