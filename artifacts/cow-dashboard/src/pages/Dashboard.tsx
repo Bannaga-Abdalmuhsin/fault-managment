@@ -434,7 +434,6 @@ export default function Dashboard() {
         <Map3D sites={mapSites} areaFilter="WR-HAJJ" />
 
         {/* ── Hajj + Kaaba icons — top-center map overlay ──────────────── */}
-        {/* ── Hajj + Kaaba icons — top-center map overlay ──────────────── */}
         {/* At h=140: hajj transparent-top=45px, kaaba=15px; container top=-(45-28)=-17 */}
         <div style={{ position: "absolute", top: -17, left: "50%", transform: "translateX(-50%)",
           zIndex: 950, pointerEvents: "none",
@@ -445,6 +444,15 @@ export default function Dashboard() {
           <img src="/kaaba-icon.png" alt="Kaaba"
             style={{ height: 140, objectFit: "contain", marginTop: 30,
               filter: "drop-shadow(0 2px 14px rgba(0,0,0,0.8))" }} />
+        </div>
+
+        {/* ── COW truck icon — left of center ───────────────────────────── */}
+        {/* At h=140: transparent-top=15px → top=28-15=13 to align content below ticker */}
+        <div style={{ position: "absolute", top: 13, right: "calc(50% + 150px)",
+          zIndex: 950, pointerEvents: "none" }}>
+          <img src="/cow-truck-icon.png" alt="COW Truck"
+            style={{ height: 140, objectFit: "contain",
+              filter: "drop-shadow(0 2px 10px rgba(0,0,0,0.8))" }} />
         </div>
 
         {/* ── Ticker ────────────────────────────────────────────────────── */}
