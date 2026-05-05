@@ -30,6 +30,9 @@ interface PbiTicket {
   title: string; description: string; actionTaken: string;
   assignedTo: string; durationMin: number | null;
   totalDuration: string; slaBreach: string; createdAt: string;
+  // NSA-specific fields
+  chain?: string | number; district?: string; siteLabel?: string;
+  severity?: string; remainingSAL?: number | null; comment?: string;
 }
 interface PbiKpis {
   sites: { total: number; onAir: number; offAir: number; availability: number;
@@ -145,38 +148,18 @@ function FilterBtn({ label, active, onClick }: { label: string; active: boolean;
   );
 }
 
-// ─── Ticket row ─────────────────────────────────────────────────────────────────
-function TicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
-  const sColor = ticket.status === "open" ? P.red : ticket.status === "in_progress" ? P.orange : P.green;
-  const pColor = ticket.priority === "critical" ? P.red : ticket.priority === "high" ? P.orange : "rgba(255,255,255,0.55)";
-  return (
-    <tr style={{ background: idx % 2 === 0 ? "rgba(255,255,255,0.05)" : "transparent", fontSize: 11 }}>
-      <td style={{ padding: "4px 10px", fontWeight: 700, color: "#fff", whiteSpace: "nowrap" }}>{ticket.siteName}</td>
-      <td style={{ padding: "4px 10px" }}>
-        <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 20,
-          background: ticket.type === "power" ? "#5a3800" : "#2d1060",
-          color: ticket.type === "power" ? "#FFC107" : "#C792FF",
-          textTransform: "uppercase", letterSpacing: "0.04em" }}>
-          {ticket.type}
-        </span>
-      </td>
-      <td style={{ padding: "4px 10px", color: "rgba(255,255,255,0.65)", maxWidth: 160,
-        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ticket.title}</td>
-      <td style={{ padding: "4px 10px" }}>
-        <span style={{ fontSize: 9, fontWeight: 700, padding: "2px 8px", borderRadius: 20,
-          background: sColor, color: "#fff", textTransform: "uppercase" }}>
-          {ticket.status.replace("_", " ")}
-        </span>
-      </td>
-      <td style={{ padding: "4px 10px", fontWeight: 700, color: pColor }}>{ticket.priority}</td>
-      <td style={{ padding: "4px 10px", color: "rgba(255,255,255,0.55)", whiteSpace: "nowrap" }}>{ticket.totalDuration ?? "—"}</td>
-      <td style={{ padding: "4px 10px", color: "rgba(255,255,255,0.55)" }}>{ticket.assignedTo ?? "—"}</td>
-    </tr>
-  );
-}
+// ─── Shared table chrome ───────────────────────────────────────────────────────
+const TH_STYLE: React.CSSProperties = {
+  padding: "4px 8px", fontSize: 9, fontWeight: 700, textAlign: "left",
+  color: "rgba(220,180,255,0.9)", borderBottom: "1px solid rgba(255,255,255,0.1)",
+  position: "sticky", top: 0, background: "rgba(55,0,88,0.97)",
+  letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap",
+};
+const TD_STYLE: React.CSSProperties = { padding: "3px 8px", fontSize: 11 };
 
-function TicketTable({ title, tickets, accent, loading }: {
-  title: string; tickets: PbiTicket[]; accent: string; loading: boolean;
+function TableShell({ title, accent, count, loading, cols, children }: {
+  title: string; accent: string; count: number; loading: boolean;
+  cols: string[]; children: React.ReactNode;
 }) {
   return (
     <div style={{ borderRadius: 10, overflow: "hidden", display: "flex", flexDirection: "column",
@@ -184,38 +167,119 @@ function TicketTable({ title, tickets, accent, loading }: {
       border: `1px solid ${P.glassBorder}` }}>
       <div style={{ background: `linear-gradient(90deg, ${P.purpleDark}, ${P.purple})`,
         color: "#fff", fontSize: 12, fontWeight: 700,
-        padding: "6px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+        padding: "5px 12px", display: "flex", alignItems: "center", gap: 8 }}>
         <span style={{ width: 8, height: 8, borderRadius: "50%", display: "inline-block",
           background: accent, boxShadow: `0 0 6px ${accent}` }} />
         {title}
         <span style={{ marginLeft: "auto", background: "rgba(255,255,255,0.15)",
           borderRadius: 20, padding: "1px 10px", fontSize: 10 }}>
-          {loading ? "…" : `${tickets.length} active`}
+          {loading ? "…" : `${count} active`}
         </span>
       </div>
       <div style={{ overflowY: "auto", flex: 1 }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr>
-              {["Site","Type","Issue","Status","Priority","Duration","FO Staff"].map(h => (
-                <th key={h} style={{ padding: "4px 10px", fontSize: 9, fontWeight: 700,
-                  textAlign: "left", color: "rgba(220,180,255,0.9)",
-                  borderBottom: "1px solid rgba(255,255,255,0.1)",
-                  position: "sticky", top: 0, background: "rgba(55,0,88,0.97)",
-                  letterSpacing: "0.06em", textTransform: "uppercase" }}>{h}</th>
-              ))}
-            </tr>
+            <tr>{cols.map(h => <th key={h} style={TH_STYLE}>{h}</th>)}</tr>
           </thead>
-          <tbody>
-            {loading
-              ? <tr><td colSpan={7} style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: 12, padding: 16 }}>Loading…</td></tr>
-              : tickets.length === 0
-                ? <tr><td colSpan={7} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 14, fontWeight: 600 }}>✓ No active tickets</td></tr>
-                : tickets.map((t, i) => <TicketRow key={`${t.id}-${i}`} ticket={t} idx={i} />)}
-          </tbody>
+          <tbody>{children}</tbody>
         </table>
       </div>
     </div>
+  );
+}
+
+// ─── Power ticket row ──────────────────────────────────────────────────────────
+function PowerTicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
+  const pColor = ticket.priority === "critical" ? P.red : ticket.priority === "high" ? P.orange : "rgba(255,255,255,0.55)";
+  return (
+    <tr style={{ background: idx % 2 === 0 ? "rgba(255,255,255,0.05)" : "transparent" }}>
+      <td style={{ ...TD_STYLE, fontWeight: 700, color: "#fff", whiteSpace: "nowrap" }}>{ticket.siteId}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{(ticket as any).chain ?? "—"}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{(ticket as any).district ?? "—"}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{ticket.siteLabel ?? "—"}</td>
+      <td style={{ ...TD_STYLE, fontWeight: 700, color: pColor }}>{ticket.priority}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap" }}>{ticket.totalDuration || "—"}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.65)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ticket.description || ticket.title || "—"}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.55)" }}>{ticket.assignedTo || "—"}</td>
+    </tr>
+  );
+}
+
+// SLA threshold for power/NSA tickets: 36 hours = 2160 minutes
+const SLA_THRESHOLD_MIN = 2160;
+
+// ─── NSA ticket row ────────────────────────────────────────────────────────────
+function NsaTicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
+  const sevStr  = ticket.severity || ticket.priority || "—";
+  const sevColor = sevStr.toLowerCase() === "critical" ? P.red
+    : sevStr.toLowerCase() === "high" ? P.orange
+    : "rgba(255,255,255,0.75)";
+
+  // Compute remaining SAL: threshold - elapsed (negative = breached)
+  const salNum  = ticket.durationMin != null
+    ? SLA_THRESHOLD_MIN - ticket.durationMin
+    : null;
+  const salColor = salNum === null ? "rgba(255,255,255,0.55)"
+    : salNum < 0 ? P.red : salNum < 60 ? P.orange : P.green;
+
+  // District from siteLabel if area/district not available
+  const district = (ticket.district && ticket.district !== "") ? ticket.district
+    : (ticket as any).area || "MAKKAH";
+
+  return (
+    <tr style={{ background: idx % 2 === 0 ? "rgba(255,255,255,0.05)" : "transparent" }}>
+      <td style={{ ...TD_STYLE, fontWeight: 700, color: "#fff", whiteSpace: "nowrap" }}>{ticket.siteId}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>
+        {(ticket.chain !== undefined && ticket.chain !== "") ? ticket.chain : "1"}
+      </td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{district}</td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)" }}>{ticket.siteLabel || "—"}</td>
+      <td style={{ ...TD_STYLE, fontWeight: 700, color: sevColor, textTransform: "capitalize" }}>
+        {sevStr}
+      </td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.75)", whiteSpace: "nowrap" }}>{ticket.totalDuration || "—"}</td>
+      <td style={{ ...TD_STYLE, color: ticket.slaBreach ? P.red : "rgba(255,255,255,0.75)",
+        whiteSpace: "nowrap", fontWeight: 600 }}>
+        {ticket.slaBreach || "—"}
+      </td>
+      <td style={{ ...TD_STYLE, fontWeight: 800, color: salColor, whiteSpace: "nowrap" }}>
+        {salNum !== null ? salNum.toLocaleString() : "—"}
+      </td>
+      <td style={{ ...TD_STYLE, color: "rgba(255,255,255,0.65)", maxWidth: 150,
+        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {ticket.description || ticket.title || "—"}
+      </td>
+    </tr>
+  );
+}
+
+// ─── Power ticket table ────────────────────────────────────────────────────────
+function PowerTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading: boolean }) {
+  const cols = ["Site ID","Chain","District","Site Label","Severity","Total Duration","Problem Description","FO Staff"];
+  return (
+    <TableShell title="Running Power Outage Tickets" accent={P.orange}
+      count={tickets.length} loading={loading} cols={cols}>
+      {loading
+        ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: 12, padding: 14 }}>Loading…</td></tr>
+        : tickets.length === 0
+          ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 12, fontWeight: 600 }}>✓ No active power tickets</td></tr>
+          : tickets.map((t, i) => <PowerTicketRow key={`${t.id}-${i}`} ticket={t} idx={i} />)}
+    </TableShell>
+  );
+}
+
+// ─── NSA ticket table ──────────────────────────────────────────────────────────
+function NsaTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading: boolean }) {
+  const cols = ["Site ID","Chain","District","Site Label","TT Severity","Total Duration","Time to SLA Breach","Remaining SAL (MIN)","Problem Description"];
+  return (
+    <TableShell title="Running NSA Tickets" accent="#C792FF"
+      count={tickets.length} loading={loading} cols={cols}>
+      {loading
+        ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: 12, padding: 14 }}>Loading…</td></tr>
+        : tickets.length === 0
+          ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 12, fontWeight: 600 }}>✓ No active NSA tickets</td></tr>
+          : tickets.map((t, i) => <NsaTicketRow key={`${t.id}-${i}`} ticket={t} idx={i} />)}
+    </TableShell>
   );
 }
 
@@ -488,10 +552,8 @@ export default function Dashboard() {
       {/* ══ TICKET TABLES ════════════════════════════════════════════════════ */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6,
         padding: "0 6px 6px", height: 185, flexShrink: 0, overflow: "hidden" }}>
-        <TicketTable title="Running Power Outage Tickets"
-          tickets={filteredPower} accent={P.orange} loading={powerLoading} />
-        <TicketTable title="Running Telecom (NSA) Outage Tickets"
-          tickets={filteredTelecom} accent="#C792FF" loading={telecomLoading} />
+        <PowerTicketTable tickets={filteredPower} loading={powerLoading} />
+        <NsaTicketTable   tickets={filteredPower} loading={powerLoading} />
       </div>
 
       <style>{`

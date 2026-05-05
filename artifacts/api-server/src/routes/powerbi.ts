@@ -106,19 +106,24 @@ router.get("/pbi/sites", async (req, res) => {
 });
 
 // ─── /api/pbi/tickets/power ───────────────────────────────────────────────────
-// Power outage tickets from Input Record table (open / in-progress)
+// Power outage tickets — WR-HAJJ only, open / in-progress
 router.get("/pbi/tickets/power", async (req, res) => {
   try {
     const rows = await dax(`
       EVALUATE
       SELECTCOLUMNS(
-        FILTER('Input Record', 'Input Record'[Status] <> "Closed"),
+        FILTER('Input Record',
+          'Input Record'[Status] <> "Closed" &&
+          'Input Record'[Region] = "WR-HAJJ"
+        ),
         "ttNumber",     'Input Record'[TT Number],
         "siteId",       'Input Record'[SITE ID],
         "startDate",    'Input Record'[Start Date],
         "status",       'Input Record'[Status],
         "severity",     'Input Record'[TT Severity],
         "siteLabel",    'Input Record'[Site label],
+        "chain",        'Input Record'[Chain],
+        "district",     'Input Record'[District],
         "subcon",       'Input Record'[SubCon],
         "region",       'Input Record'[Region],
         "issue",        'Input Record'[Issue],
@@ -162,56 +167,65 @@ router.get("/pbi/tickets/power", async (req, res) => {
 });
 
 // ─── /api/pbi/tickets/telecom ─────────────────────────────────────────────────
-// Telecom (NSA) outage tickets from SIR table (open / in-progress)
+// NSA outage tickets from SIR table — WR-HAJJ only, open / in-progress
 router.get("/pbi/tickets/telecom", async (req, res) => {
   try {
     const rows = await dax(`
       EVALUATE
       SELECTCOLUMNS(
-        FILTER(SIR, SIR[Status] <> "Closed"),
-        "ttNumber",     SIR[TT Number],
-        "siteId",       SIR[Site],
-        "startDate",    SIR[OOS Start Date],
-        "status",       SIR[Status],
-        "severity",     SIR[TT Severity],
-        "siteLabel",    SIR[Site label],
-        "area",         SIR[Area],
-        "region",       SIR[Region],
-        "faultType",    SIR[Fault Type],
-        "foStaff",      SIR[FO Staff],
-        "description",  SIR[Alarms Description],
-        "actionTaken",  SIR[Action Taken],
-        "owner",        SIR[Owner],
-        "powerSource",  SIR[Power source],
-        "durationMin",  SIR[Duration (Min)],
-        "totalDuration",SIR[Total Duration],
-        "slaBreach",    SIR[Time to SLA Breach],
-        "batteryStatus",SIR[Battery Status],
-        "summary",      SIR[SUMMARY]
+        FILTER(SIR,
+          SIR[Status] <> "Closed" &&
+          SIR[Region] = "WR-HAJJ"
+        ),
+        "ttNumber",      SIR[TT Number],
+        "siteId",        SIR[Site],
+        "startDate",     SIR[OOS Start Date],
+        "status",        SIR[Status],
+        "severity",      SIR[TT Severity],
+        "siteLabel",     SIR[Site label],
+        "area",          SIR[Area],
+        "region",        SIR[Region],
+        "faultType",     SIR[Fault Type],
+        "foStaff",       SIR[FO Staff],
+        "description",   SIR[Alarms Description],
+        "actionTaken",   SIR[Action Taken],
+        "owner",         SIR[Owner],
+        "powerSource",   SIR[Power source],
+        "durationMin",   SIR[Duration (Min)],
+        "totalDuration", SIR[Total Duration],
+        "slaBreach",     SIR[Time to SLA Breach],
+        "batteryStatus", SIR[Battery Status],
+        "summary",       SIR[SUMMARY]
       )
     `);
     const tickets = rows.map((r: any) => ({
-      id: r["[ttNumber]"],
-      ttNumber: r["[ttNumber]"],
-      siteId: r["[siteId]"],
-      siteName: r["[siteId]"],
-      type: "telecom",
-      status: mapStatus(r["[status]"]),
-      priority: mapSeverity(r["[severity]"]),
-      title: r["[faultType]"] ?? r["[description]"] ?? "Telecom Issue",
-      description: r["[description]"],
-      actionTaken: r["[actionTaken]"],
-      assignedTo: r["[foStaff]"],
-      owner: r["[owner]"],
-      powerSource: r["[powerSource]"],
-      durationMin: r["[durationMin]"],
-      totalDuration: r["[totalDuration]"],
-      slaBreach: r["[slaBreach]"],
-      batteryStatus: r["[batteryStatus]"],
-      siteLabel: r["[siteLabel]"],
-      area: r["[area]"],
-      region: r["[region]"],
-      createdAt: r["[startDate]"],
+      id:            r["[ttNumber]"],
+      ttNumber:      r["[ttNumber]"],
+      siteId:        r["[siteId]"],
+      siteName:      r["[siteId]"],
+      type:          "telecom" as const,
+      status:        mapStatus(r["[status]"]),
+      priority:      mapSeverity(r["[severity]"]),
+      severity:      r["[severity]"] ?? "",
+      title:         r["[faultType]"] ?? r["[description]"] ?? "NSA Issue",
+      description:   r["[description]"] ?? r["[alarmsDesc]"] ?? "",
+      alarmsDesc:    r["[alarmsDesc]"] ?? "",
+      actionTaken:   r["[actionTaken]"] ?? "",
+      comment:       r["[comment]"] ?? "",
+      assignedTo:    r["[foStaff]"] ?? "",
+      owner:         r["[owner]"] ?? "",
+      chain:         r["[chain]"] ?? "",
+      district:      r["[district]"] ?? r["[area]"] ?? "",
+      siteLabel:     r["[siteLabel]"] ?? "",
+      area:          r["[area]"] ?? "",
+      region:        r["[region]"] ?? "",
+      powerSource:   r["[powerSource]"] ?? "",
+      remainingSAL:  r["[durationMin]"] ?? null,
+      durationMin:   r["[durationMin]"] ?? null,
+      totalDuration: r["[totalDuration]"] ?? "",
+      slaBreach:     r["[slaBreach]"] ?? "",
+      batteryStatus: r["[batteryStatus]"] ?? "",
+      createdAt:     r["[startDate]"] ?? "",
     }));
     res.json(tickets);
   } catch (err: any) {
