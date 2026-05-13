@@ -135,25 +135,22 @@ type AtRiskEntry = {
   site?: { area?: string | null; powerConfig?: string; batteryUsefulTimeHrs?: number | null };
 };
 function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) {
-  // Running Duration: count-UP from ticket createdAt
-  const ticketStartMs = useRef(Date.parse(r.createdAt) || Date.now());
-  // Battery Remaining: count-DOWN from full batteryUsefulTimeHrs, starting at mount
-  const mountMs       = useRef(Date.now());
-  const [, setTick]   = useState(0);
+  // Both timers start from when the card mounts on screen
+  const mountMs     = useRef(Date.now());
+  const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const battHrs  = r.site?.batteryUsefulTimeHrs ?? null;
-  const totalS   = battHrs != null ? Math.round(battHrs * 3600) : null;
+  const battHrs = r.site?.batteryUsefulTimeHrs ?? null;
+  const totalS  = battHrs != null ? Math.round(battHrs * 3600) : null;
 
-  // Count-up: elapsed since ticket was opened
-  const elapsedS = Math.floor((Date.now() - ticketStartMs.current) / 1000);
+  // Seconds elapsed since this card appeared on screen
+  const elapsedS = Math.floor((Date.now() - mountMs.current) / 1000);
 
-  // Count-down: battery capacity minus time elapsed since this card mounted
-  const mountedElapsedS = Math.floor((Date.now() - mountMs.current) / 1000);
-  const remainS = totalS != null ? Math.max(0, totalS - mountedElapsedS) : null;
+  // Count-down: full battery capacity minus elapsed since mount
+  const remainS = totalS != null ? Math.max(0, totalS - elapsedS) : null;
 
   const battColor = remainS == null ? pal.orange
     : remainS < 600   ? pal.red      // < 10 min
