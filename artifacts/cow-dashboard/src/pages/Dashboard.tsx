@@ -359,15 +359,11 @@ export default function Dashboard() {
 
   // ── Map sites ──────────────────────────────────────────────────────────────
   const mapSites = useMemo(() => {
-    // Power tickets: SIR table + any NSA ticket owned by "Power" team
-    const openPower = new Set([
+    // Any open ticket (power or telecom) → site has an active ticket
+    const openAnyTicket = new Set([
       ...(powerTix ?? []).filter(t => t.status !== "closed").map(t => t.siteName),
-      ...(telecomTix ?? []).filter(t => t.status !== "closed" && t.owner?.toLowerCase() === "power").map(t => t.siteName),
+      ...(telecomTix ?? []).filter(t => t.status !== "closed").map(t => t.siteName),
     ]);
-    // NSA tickets: exclude ones already escalated to Power team (they show red)
-    const openNsa = new Set(
-      (telecomTix ?? []).filter(t => t.status !== "closed" && t.owner?.toLowerCase() !== "power").map(t => t.siteName)
-    );
     return areaSites
       .filter(s => s.latitude != null && s.longitude != null)
       .filter(s => cowIdFilter === "All" || s.name === cowIdFilter)
@@ -375,8 +371,10 @@ export default function Dashboard() {
         id: i as unknown as number, name: s.name, zone: s.zone ?? "Hajj",
         status: s.status, latitude: s.latitude!, longitude: s.longitude!,
         siteClass: s.siteLabel,
-        hasPowerTicket: openPower.has(s.name),
-        hasNsaTicket:   openNsa.has(s.name),
+        // RED  = site is offline/down (status driven, not ticket-type driven)
+        // YELLOW = site operational but has an open ticket
+        hasPowerTicket: s.status === "offline",
+        hasNsaTicket:   s.status !== "offline" && openAnyTicket.has(s.name),
       }));
   }, [areaSites, cowIdFilter, powerTix, telecomTix]);
 
