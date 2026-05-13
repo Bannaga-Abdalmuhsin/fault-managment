@@ -111,9 +111,12 @@ router.get("/pbi/tickets/power", async (req, res) => {
   try {
     const rows = await dax(`
       EVALUATE
+      VAR _hajjSites = SELECTCOLUMNS(FILTER(DB, DB[Region] = "WR-HAJJ"), "sid", DB[Site ID])
+      RETURN
       SELECTCOLUMNS(
         FILTER('Input Record',
-          'Input Record'[Status] <> "Closed"
+          'Input Record'[Status] <> "Closed" &&
+          CONTAINS(_hajjSites, [sid], 'Input Record'[SITE ID])
         ),
         "ttNumber",     'Input Record'[TT Number],
         "siteId",       'Input Record'[SITE ID],
@@ -171,9 +174,12 @@ router.get("/pbi/tickets/telecom", async (req, res) => {
   try {
     const rows = await dax(`
       EVALUATE
+      VAR _hajjSites = SELECTCOLUMNS(FILTER(DB, DB[Region] = "WR-HAJJ"), "sid", DB[Site ID])
+      RETURN
       SELECTCOLUMNS(
         FILTER(SIR,
-          SIR[Status] <> "Closed"
+          SIR[Status] <> "Closed" &&
+          CONTAINS(_hajjSites, [sid], SIR[Site])
         ),
         "ttNumber",      SIR[TT Number],
         "siteId",        SIR[Site],
@@ -279,20 +285,28 @@ router.get("/pbi/kpis", async (req, res) => {
       `),
       dax(`
         EVALUATE
+        VAR _s = SELECTCOLUMNS(FILTER(DB, DB[Region] = "WR-HAJJ"), "sid", DB[Site ID])
+        VAR _open   = FILTER('Input Record', 'Input Record'[Status] <> "Closed" && CONTAINS(_s, [sid], 'Input Record'[SITE ID]))
+        VAR _closed = FILTER('Input Record', 'Input Record'[Status] = "Closed"  && CONTAINS(_s, [sid], 'Input Record'[SITE ID]))
+        RETURN
         ROW(
-          "open",   CALCULATE(COUNTROWS('Input Record'), 'Input Record'[Status] <> "Closed"),
-          "closed", CALCULATE(COUNTROWS('Input Record'), 'Input Record'[Status] = "Closed"),
-          "high",   CALCULATE(COUNTROWS('Input Record'), 'Input Record'[Status] <> "Closed", 'Input Record'[TT Severity] = "High"),
-          "critical",CALCULATE(COUNTROWS('Input Record'), 'Input Record'[Status] <> "Closed", 'Input Record'[TT Severity] = "Critical")
+          "open",    COUNTROWS(_open),
+          "closed",  COUNTROWS(_closed),
+          "high",    COUNTROWS(FILTER(_open, 'Input Record'[TT Severity] = "High")),
+          "critical",COUNTROWS(FILTER(_open, 'Input Record'[TT Severity] = "Critical"))
         )
       `),
       dax(`
         EVALUATE
+        VAR _s = SELECTCOLUMNS(FILTER(DB, DB[Region] = "WR-HAJJ"), "sid", DB[Site ID])
+        VAR _open   = FILTER(SIR, SIR[Status] <> "Closed" && CONTAINS(_s, [sid], SIR[Site]))
+        VAR _closed = FILTER(SIR, SIR[Status] = "Closed"  && CONTAINS(_s, [sid], SIR[Site]))
+        RETURN
         ROW(
-          "open",   CALCULATE(COUNTROWS(SIR), SIR[Status] <> "Closed"),
-          "closed", CALCULATE(COUNTROWS(SIR), SIR[Status] = "Closed"),
-          "high",   CALCULATE(COUNTROWS(SIR), SIR[Status] <> "Closed", SIR[TT Severity] = "High"),
-          "critical",CALCULATE(COUNTROWS(SIR), SIR[Status] <> "Closed", SIR[TT Severity] = "Critical")
+          "open",    COUNTROWS(_open),
+          "closed",  COUNTROWS(_closed),
+          "high",    COUNTROWS(FILTER(_open, SIR[TT Severity] = "High")),
+          "critical",COUNTROWS(FILTER(_open, SIR[TT Severity] = "Critical"))
         )
       `),
     ]);
