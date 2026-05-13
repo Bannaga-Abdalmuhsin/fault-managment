@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Map3D from "@/components/Map3D";
 import GaugeSvg from "@/components/Gauge";
 
@@ -135,21 +135,29 @@ type AtRiskEntry = {
   site?: { area?: string | null; powerConfig?: string; batteryUsefulTimeHrs?: number | null };
 };
 function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) {
-  const [tick, setTick] = useState(0);
+  // Running Duration: count-UP from ticket createdAt
+  const ticketStartMs = useRef(Date.parse(r.createdAt) || Date.now());
+  // Battery Remaining: count-DOWN from full batteryUsefulTimeHrs, starting at mount
+  const mountMs       = useRef(Date.now());
+  const [, setTick]   = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const startMs  = Date.parse(r.createdAt) || Date.now();
-  const elapsedS = Math.floor((Date.now() - startMs) / 1000);
   const battHrs  = r.site?.batteryUsefulTimeHrs ?? null;
   const totalS   = battHrs != null ? Math.round(battHrs * 3600) : null;
-  const remainS  = totalS != null ? Math.max(0, totalS - elapsedS) : null;
+
+  // Count-up: elapsed since ticket was opened
+  const elapsedS = Math.floor((Date.now() - ticketStartMs.current) / 1000);
+
+  // Count-down: battery capacity minus time elapsed since this card mounted
+  const mountedElapsedS = Math.floor((Date.now() - mountMs.current) / 1000);
+  const remainS = totalS != null ? Math.max(0, totalS - mountedElapsedS) : null;
 
   const battColor = remainS == null ? pal.orange
-    : remainS < 3600  ? pal.red
-    : remainS < 14400 ? pal.orange
+    : remainS < 600   ? pal.red      // < 10 min
+    : remainS < 3600  ? pal.orange   // < 1 hr
     : "#38D4FF";
 
   const dbPower   = r.site?.powerConfig;
@@ -177,23 +185,26 @@ function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) 
         <Row label="ETA to Site" value={`${eta}${area ? ` (${area})` : ""}`} color="#38D4FF" />
       </div>
       <div style={{ marginTop:8, borderTop:"1px solid rgba(245,158,11,0.18)", paddingTop:8,
-        display:"flex", flexDirection:"column", gap:6 }}>
-        <div>
-          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
-            color:"rgba(255,255,255,0.38)", marginBottom:3 }}>Running Duration</div>
-          <div style={{ fontSize:22, fontWeight:900, fontFamily:"monospace",
-            letterSpacing:"0.08em", color:pal.orange }}>
+        display:"flex", gap:10 }}>
+        {/* Count-UP: time since ticket opened */}
+        <div style={{ flex:1, background:"rgba(0,0,0,0.18)", borderRadius:7, padding:"7px 10px" }}>
+          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
+            color:"rgba(255,255,255,0.38)", marginBottom:4 }}>⏱ Running Duration</div>
+          <div style={{ fontSize:21, fontWeight:900, fontFamily:"monospace",
+            letterSpacing:"0.06em", color:pal.orange }}>
             {fmtSec(elapsedS)}
           </div>
         </div>
+        {/* Count-DOWN: battery backup remaining from capacity */}
         {remainS !== null && (
-          <div>
-            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
-              color:"rgba(255,255,255,0.38)", marginBottom:3 }}>Battery Remaining</div>
-            <div style={{ fontSize:22, fontWeight:900, fontFamily:"monospace",
-              letterSpacing:"0.08em", color:battColor,
-              animation: remainS < 300 ? "pulse 1s infinite" : undefined }}>
-              {remainS > 0 ? fmtSec(remainS) : "⚡ DEPLETED"}
+          <div style={{ flex:1, background:"rgba(0,0,0,0.18)", borderRadius:7, padding:"7px 10px" }}>
+            <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
+              color:"rgba(255,255,255,0.38)", marginBottom:4 }}>
+              🔋 Battery ({fmtHrs(battHrs!)})
+            </div>
+            <div style={{ fontSize:21, fontWeight:900, fontFamily:"monospace",
+              letterSpacing:"0.06em", color:battColor }}>
+              {fmtSec(remainS)}
             </div>
           </div>
         )}
