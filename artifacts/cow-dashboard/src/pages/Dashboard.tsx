@@ -24,7 +24,7 @@ const AREA_LIST = ["Arafat","Muzdalifah","Mina","Makkah Remote"] as const;
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface PbiSite {
   id: string; name: string; region: string; zone: string;
-  area: string | null;
+  area: string | null; powerConfig?: string;
   siteLabel: string; latitude: number | null; longitude: number | null;
   status: "operational" | "offline";
 }
@@ -34,6 +34,8 @@ interface PbiTicket {
   title: string; description: string; actionTaken: string;
   assignedTo: string; durationMin: number | null;
   totalDuration: string; slaBreach: string; createdAt: string;
+  // power/supply fields
+  powerSource?: string; batteryStatus?: string; owner?: string; subcon?: string;
   // NSA-specific fields
   chain?: string | number; district?: string; siteLabel?: string;
   severity?: string; remainingSAL?: number | null; comment?: string;
@@ -98,6 +100,19 @@ function SLabel({ text }: { text: string }) {
       {text}
     </div>
   );
+}
+function Row({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", gap: 4 }}>
+      <span style={{ color: "rgba(255,255,255,0.38)", flexShrink: 0 }}>{label}</span>
+      <span style={{ color: color ?? "rgba(255,255,255,0.82)", fontWeight: 600, textAlign: "right" }}>{value}</span>
+    </div>
+  );
+}
+function fmtMin(min: number): string {
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
 }
 
 // ─── KPI row ───────────────────────────────────────────────────────────────────
@@ -378,6 +393,24 @@ export default function Dashboard() {
       }));
   }, [areaSites, cowIdFilter, powerTix, telecomTix]);
 
+  // ── At-risk sites: operational but with open ticket → pre-outage warning ──
+  const atRiskSites = useMemo(() => {
+    const sites = pbiSites ?? [];
+    const allOpenTix = [
+      ...(powerTix  ?? []).filter(t => t.status !== "closed"),
+      ...(telecomTix ?? []).filter(t => t.status !== "closed"),
+    ];
+    return allOpenTix
+      .filter(t => {
+        const site = sites.find(s => s.name === t.siteName);
+        return site?.status !== "offline"; // only yellow (still operational) sites
+      })
+      .map(t => ({
+        ...t,
+        site: sites.find(s => s.name === t.siteName),
+      }));
+  }, [pbiSites, powerTix, telecomTix]);
+
   // ── Ticket filtering (area + status) ──────────────────────────────────────
   const areaNames = useMemo(() => new Set(areaSites.map(s => s.name)), [areaSites]);
   const fTix = (tix: PbiTicket[] | null) =>
@@ -592,6 +625,65 @@ export default function Dashboard() {
               })}
             </div>
           </div>
+
+          {/* ── At-Risk Sites: pre-outage warning ─────────────────────── */}
+          {atRiskSites.length > 0 && (
+            <>
+              <div style={{ height: 1, background: "rgba(200,140,255,0.2)", margin: "0 -2px" }} />
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", color: P.orange }}>
+                    ⚠ AT-RISK SITES
+                  </span>
+                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>({atRiskSites.length})</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 340, overflowY: "auto" }}>
+                  {atRiskSites.map(r => {
+                    const remaining = r.remainingSAL ?? r.durationMin;
+                    const riskColor = remaining == null ? P.orange
+                      : remaining < 60  ? P.red
+                      : remaining < 240 ? P.orange
+                      : "#38D4FF";
+                    const psCode = (r.powerSource ?? "").toString().toUpperCase();
+                    const powerLabel = psCode === "SG" ? "Generator"
+                      : psCode === "SB" ? "Battery"
+                      : psCode === "GRID" ? "Grid"
+                      : psCode || "—";
+                    const riskLabel = (r.priority ?? r.severity ?? "").toUpperCase() || "OPEN";
+                    return (
+                      <div key={r.id} style={{
+                        background: "rgba(245,158,11,0.07)",
+                        border: "1px solid rgba(245,158,11,0.30)",
+                        borderRadius: 8, padding: "8px 10px",
+                      }}>
+                        {/* Site ID + risk badge */}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
+                          <span style={{ fontSize: 13, fontWeight: 800, color: P.orange }}>{r.siteName}</span>
+                          <span style={{
+                            fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 8,
+                            background: riskColor === P.red ? "rgba(239,68,68,0.22)" : "rgba(245,158,11,0.22)",
+                            color: riskColor, letterSpacing: "0.05em",
+                          }}>{riskLabel}</span>
+                        </div>
+                        {/* Issue title */}
+                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", marginBottom: 5, lineHeight: 1.3 }}>
+                          {r.title}
+                        </div>
+                        {/* Detail rows */}
+                        <div style={{ fontSize: 11, lineHeight: 1.9 }}>
+                          <Row label="Power" value={`${powerLabel}${psCode ? ` (${psCode})` : ""}`} />
+                          {r.site?.powerConfig && <Row label="Config" value={r.site.powerConfig} />}
+                          <Row label="Backup" value={remaining != null ? fmtMin(remaining) : (r.totalDuration || "—")} color={riskColor} />
+                          <Row label="Running" value={r.totalDuration || "—"} />
+                          <Row label="SLA in" value={r.slaBreach || "—"} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </Glass>
 
         {/* ── RIGHT: gauge panel (top) ────────────────────────────────────── */}
