@@ -4,17 +4,17 @@ import GaugeSvg from "@/components/Gauge";
 
 // ─── Brand palette ─────────────────────────────────────────────────────────────
 const P = {
-  purple:      "#6B1FA2",
-  purpleDark:  "#4B006E",
-  purpleDeep:  "#1A0533",
-  purpleMid:   "#5A1285",
+  purple:      "#4E008E",
+  purpleDark:  "#38006A",
+  purpleDeep:  "#14002A",
+  purpleMid:   "#4E008E",
   green:       "#38D4FF",
   greenDark:   "#0090BB",
   red:         "#EF4444",
   orange:      "#F59E0B",
   white:       "#ffffff",
   // Glass: rich purple tint, translucent
-  glass:       "rgba(75, 0, 110, 0.84)",
+  glass:       "rgba(78, 0, 142, 0.84)",
   glassBorder: "rgba(200, 140, 255, 0.28)",
 };
 
