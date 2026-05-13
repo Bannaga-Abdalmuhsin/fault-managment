@@ -171,8 +171,6 @@ function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) 
   const area = r.site?.area ?? "";
   const eta  = area === "Makkah Remote" ? "30 min" : "15 min";
 
-  void tick;
-
   return (
     <div style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.30)",
       borderRadius:8, padding:"10px 12px" }}>
