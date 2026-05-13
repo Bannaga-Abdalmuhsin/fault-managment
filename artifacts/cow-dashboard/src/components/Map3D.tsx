@@ -202,7 +202,7 @@ function addMarkers(sites: MapSite[], map: any, maplibregl: any, markersRef: any
       el.addEventListener("mouseleave", () => { dot.style.transform = "scale(1)"; });
 
       const popup = new maplibregl.Popup({ offset: 10, closeButton: false }).setHTML(
-        `<div style="font-size:11px;font-family:system-ui"><strong>${site.name}</strong><br/>Zone: ${site.zone}<br/>Status: <span style="color:${color};font-weight:700">${site.status.toUpperCase()}</span></div>`
+        `<div style="font-size:11px;font-family:system-ui"><strong>${site.name}</strong><br/>Zone: ${site.zone}<br/>Status: <span style="color:${color};font-weight:700">${site.hasPowerTicket ? "DOWN" : site.hasNsaTicket ? "UP" : "OPERATIONAL"}</span></div>`
       );
 
       const marker = new maplibregl.Marker({ element: el })
@@ -293,7 +293,7 @@ function LeafletMap({ sites, areaFilter }: Map3DProps) {
         const marker = L.marker([site.latitude!, site.longitude!], { icon });
 
         marker.bindTooltip(
-          `<strong>${site.name}</strong><br/>Zone: ${site.zone}<br/>Status: <span style="color:${color};font-weight:700">${site.status.toUpperCase()}</span>`,
+          `<strong>${site.name}</strong><br/>Zone: ${site.zone}<br/>Status: <span style="color:${color};font-weight:700">${site.hasPowerTicket ? "DOWN" : site.hasNsaTicket ? "UP" : "OPERATIONAL"}</span>`,
           { direction: "top", offset: [0, -4] }
         );
 
