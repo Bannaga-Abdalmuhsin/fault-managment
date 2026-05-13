@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { db, sitesTable } from "@workspace/db";
 import { logger } from "../lib/logger";
 
 const router = Router();
@@ -75,17 +76,27 @@ router.get("/pbi/sites", async (req, res) => {
         "has5G",         DB[5G]
       )
     `);
+    // Fetch local DB power config keyed by site name
+    const dbSites = await db.select({
+      name: sitesTable.name,
+      powerConfig: sitesTable.powerConfig,
+      batteryUsefulTimeHrs: sitesTable.batteryUsefulTimeHrs,
+    }).from(sitesTable);
+    const dbPower = new Map(dbSites.map(s => [s.name, s]));
+
     // Normalise status: "ON-AIR" → operational, anything else → offline
     const sites = rows.map((r: any) => {
       const mscId = (r["[status]"] ?? "").toString().toUpperCase();
       const pmp   = (r["[pmpStatus]"] ?? "").toString().toUpperCase();
       const operational = mscId === "ON-AIR" && pmp !== "DOWN";
+      const siteId = r["[siteId]"];
+      const local  = dbPower.get(siteId);
       return {
-        id: r["[siteId]"],
-        name: r["[siteId]"],
+        id: siteId,
+        name: siteId,
         region: r["[region]"],
         zone: r["[zone]"],
-        area: r["[area]"] ?? null,   // PBI area classification: Arafat / Muzdalifah / Mina / Makkah Remote
+        area: r["[area]"] ?? null,
         technology: r["[technology]"],
         siteLabel: r["[siteLabel]"],
         vendor: r["[vendor]"],
@@ -93,7 +104,9 @@ router.get("/pbi/sites", async (req, res) => {
         longitude: r["[longitude]"],
         status: operational ? "operational" : "offline",
         pmpStatus: r["[pmpStatus]"],
-        powerConfig: r["[powerConfig]"],
+        // powerConfig: DB label overrides PBI code (e.g. "Commercial + Standby Battery" > "SB")
+        powerConfig:          local?.powerConfig          ?? r["[powerConfig]"] ?? null,
+        batteryUsefulTimeHrs: local?.batteryUsefulTimeHrs ?? null,
         chain: r["[chain]"],
         has2G: r["[has2G]"] === 1,
         has4G: r["[has4G]"] === 1,

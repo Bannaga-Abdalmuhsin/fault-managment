@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { db, sitesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { z } from "zod/v4";
 
 const router = Router();
 
@@ -48,9 +47,28 @@ router.patch("/sites/:id", async (req, res) => {
       ...(body.status !== undefined && { status: body.status }),
       ...(body.latitude !== undefined && { latitude: body.latitude }),
       ...(body.longitude !== undefined && { longitude: body.longitude }),
+      ...(body.powerConfig !== undefined && { powerConfig: body.powerConfig }),
+      ...(body.batteryUsefulTimeHrs !== undefined && { batteryUsefulTimeHrs: body.batteryUsefulTimeHrs }),
       updatedAt: new Date(),
     })
     .where(eq(sitesTable.id, id))
+    .returning();
+  if (!site) return res.status(404).json({ error: "Site not found" });
+  res.json(site);
+});
+
+// PATCH /sites/by-name/:name/power — update power fields by site name (COW ID)
+router.patch("/sites/by-name/:name/power", async (req, res) => {
+  const { name } = req.params;
+  const body = req.body as { powerConfig?: string; batteryUsefulTimeHrs?: number };
+  const [site] = await db
+    .update(sitesTable)
+    .set({
+      ...(body.powerConfig !== undefined          && { powerConfig: body.powerConfig }),
+      ...(body.batteryUsefulTimeHrs !== undefined && { batteryUsefulTimeHrs: Number(body.batteryUsefulTimeHrs) }),
+      updatedAt: new Date(),
+    })
+    .where(eq(sitesTable.name, name))
     .returning();
   if (!site) return res.status(404).json({ error: "Site not found" });
   res.json(site);

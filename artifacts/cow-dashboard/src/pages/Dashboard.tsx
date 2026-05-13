@@ -24,7 +24,7 @@ const AREA_LIST = ["Arafat","Muzdalifah","Mina","Makkah Remote"] as const;
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface PbiSite {
   id: string; name: string; region: string; zone: string;
-  area: string | null; powerConfig?: string;
+  area: string | null; powerConfig?: string; batteryUsefulTimeHrs?: number | null;
   siteLabel: string; latitude: number | null; longitude: number | null;
   status: "operational" | "offline";
 }
@@ -112,6 +112,12 @@ function Row({ label, value, color }: { label: string; value: string; color?: st
 function fmtMin(min: number): string {
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+function fmtHrs(hrs: number): string {
+  const h = Math.floor(hrs);
+  const m = Math.round((hrs - h) * 60);
+  if (h === 0) return `${m} min`;
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
@@ -661,37 +667,42 @@ export default function Dashboard() {
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" }}>
                 {atRiskSites.map(r => {
-                  const remaining = r.remainingSAL ?? r.durationMin;
-                  const battColor = remaining == null ? P.orange
-                    : remaining < 60  ? P.red
-                    : remaining < 240 ? P.orange
-                    : "#38D4FF";
-                  // Power config friendly label
-                  const cfgCode = ((r.site?.powerConfig ?? r.powerSource) ?? "").toString().toUpperCase();
-                  const powerDesc = cfgCode === "SG" ? "Commercial + Standby Generator"
-                    : cfgCode === "SB" ? "Commercial + Standby Battery"
-                    : cfgCode === "DG" ? "Commercial + Diesel Generator"
-                    : cfgCode || "—";
+                  // Battery time: prefer DB hours value, fall back to ticket minutes
+                  const battHrs  = r.site?.batteryUsefulTimeHrs;
+                  const battMins = r.remainingSAL ?? r.durationMin;
+                  const battDisplay = battHrs != null
+                    ? fmtHrs(battHrs)
+                    : battMins != null ? fmtMin(battMins) : "—";
+                  const battColor = battHrs != null
+                    ? (battHrs < 1 ? P.red : battHrs < 4 ? P.orange : "#38D4FF")
+                    : battMins != null
+                      ? (battMins < 60 ? P.red : battMins < 240 ? P.orange : "#38D4FF")
+                      : P.orange;
+                  // Power: DB human-readable label overrides PBI code
+                  const dbPower  = r.site?.powerConfig;
+                  const cfgCode  = (r.powerSource ?? "").toString().toUpperCase();
+                  const powerDesc = dbPower
+                    ?? (cfgCode === "SG" ? "Commercial + Standby Generator"
+                      : cfgCode === "SB" ? "Commercial + Standby Battery"
+                      : cfgCode === "DG" ? "Commercial + Diesel Generator"
+                      : cfgCode || "—");
                   // ETA by area
                   const area = r.site?.area ?? "";
-                  const eta = area === "Makkah Remote" ? "30 min" : "15 min";
-                  const etaNote = area ? `(${area})` : "";
+                  const eta  = area === "Makkah Remote" ? "30 min" : "15 min";
                   return (
                     <div key={r.id} style={{
                       background: "rgba(245,158,11,0.07)",
                       border: "1px solid rgba(245,158,11,0.30)",
                       borderRadius: 8, padding: "8px 10px",
                     }}>
-                      {/* Site ID header */}
                       <div style={{ fontSize: 13, fontWeight: 800, color: P.orange, marginBottom: 7 }}>
                         {r.siteName}
                       </div>
-                      {/* 4 required fields */}
                       <div style={{ fontSize: 11, lineHeight: 2 }}>
-                        <Row label="Alarm"        value={r.title || "—"} />
-                        <Row label="Power"        value={powerDesc} />
-                        <Row label="Battery Time" value={remaining != null ? fmtMin(remaining) : (r.totalDuration || "—")} color={battColor} />
-                        <Row label="ETA"          value={`${eta} ${etaNote}`} color="#38D4FF" />
+                        <Row label="Alarm"             value={r.title || "—"} />
+                        <Row label="Power"             value={powerDesc} />
+                        <Row label="Battery Useful Time" value={battDisplay} color={battColor} />
+                        <Row label="ETA to Site"       value={`${eta}${area ? ` (${area})` : ""}`} color="#38D4FF" />
                       </div>
                     </div>
                   );
