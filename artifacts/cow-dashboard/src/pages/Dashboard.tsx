@@ -466,6 +466,26 @@ export default function Dashboard() {
         </div>
 
         <img src="/aces-logo.png" alt="ACES" style={{ height: 52, objectFit: "contain" }} />
+
+        <button
+          onClick={() => { sessionStorage.removeItem("cow_token"); window.location.reload(); }}
+          title="Sign out"
+          style={{
+            display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
+            background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: 8, padding: "5px 11px", color: "rgba(255,255,255,0.7)",
+            fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", transition: "all 0.2s",
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.18)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,68,68,0.45)"; (e.currentTarget as HTMLButtonElement).style.color = "#FCA5A5"; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.15)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.7)"; }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Logout
+        </button>
       </div>
 
       {/* ══ MAP (full width) ══════════════════════════════════════════════════ */}
