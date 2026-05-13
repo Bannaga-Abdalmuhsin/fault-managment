@@ -47,9 +47,10 @@ export default function Login({ onSuccess }: Props) {
       <div style={{
         position: "absolute", inset: 0,
         backgroundImage: "url(/login-bg.png)",
-        backgroundSize: "cover",
-        backgroundPosition: "center right",
+        backgroundSize: "contain",
+        backgroundPosition: "right center",
         backgroundRepeat: "no-repeat",
+        backgroundColor: "#0a011a",
       }} />
 
       {/* Gradient overlay — heavier on left, fades right */}
