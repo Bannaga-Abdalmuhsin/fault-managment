@@ -135,7 +135,10 @@ type AtRiskEntry = {
   site?: { area?: string | null; powerConfig?: string; batteryUsefulTimeHrs?: number | null };
 };
 function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) {
-  // Both timers start from when the card mounts on screen
+  // Running Duration start: PBI Assigned Time (createdAt = [startDate] from PBI)
+  // Treat as Arabia Standard Time (UTC+3) since PBI dataset is in AST
+  const assignedMs  = useRef(Date.parse(r.createdAt.includes("+") ? r.createdAt : r.createdAt + "+03:00") || Date.now());
+  // Battery countdown starts from page load so it never shows depleted
   const mountMs     = useRef(Date.now());
   const [, setTick] = useState(0);
   useEffect(() => {
@@ -146,11 +149,12 @@ function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) 
   const battHrs = r.site?.batteryUsefulTimeHrs ?? null;
   const totalS  = battHrs != null ? Math.round(battHrs * 3600) : null;
 
-  // Seconds elapsed since this card appeared on screen
-  const elapsedS = Math.floor((Date.now() - mountMs.current) / 1000);
+  // Count-UP: live elapsed time since ticket was assigned (PBI Assigned Time)
+  const elapsedS = Math.floor((Date.now() - assignedMs.current) / 1000);
 
-  // Count-down: full battery capacity minus elapsed since mount
-  const remainS = totalS != null ? Math.max(0, totalS - elapsedS) : null;
+  // Count-DOWN: full battery capacity minus time elapsed since page load
+  const mountedElapsedS = Math.floor((Date.now() - mountMs.current) / 1000);
+  const remainS = totalS != null ? Math.max(0, totalS - mountedElapsedS) : null;
 
   const battColor = remainS == null ? pal.orange
     : remainS < 600   ? pal.red      // < 10 min
