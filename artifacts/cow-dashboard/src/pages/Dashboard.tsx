@@ -465,7 +465,7 @@ export default function Dashboard() {
           <span style={{ color: P.green, fontSize: 11, fontWeight: 700 }}>LIVE</span>
         </div>
 
-        <img src="/aces-logo.png" alt="ACES" style={{ height: 38, objectFit: "contain" }} />
+        <img src="/aces-logo.png" alt="ACES" style={{ height: 52, objectFit: "contain" }} />
       </div>
 
       {/* ══ MAP (full width) ══════════════════════════════════════════════════ */}
