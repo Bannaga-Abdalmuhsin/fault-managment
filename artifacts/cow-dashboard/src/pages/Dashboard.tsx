@@ -130,14 +130,14 @@ function fmtSec(totalSec: number): string {
 
 // ─── Live at-risk site card with count-up + countdown timers ──────────────────
 type AtRiskEntry = {
-  id: string; siteName: string; title: string; createdAt: string;
+  id: string; siteName: string; title: string; createdAt: string; assignedAt?: string;
   powerSource?: string; remainingSAL?: number | null; durationMin?: number | null;
   site?: { area?: string | null; powerConfig?: string; batteryUsefulTimeHrs?: number | null };
 };
 function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) {
-  // Running Duration start: PBI Assigned Time (createdAt = [startDate] from PBI)
-  // Treat as Arabia Standard Time (UTC+3) since PBI dataset is in AST
-  const assignedMs  = useRef(Date.parse(r.createdAt.includes("+") ? r.createdAt : r.createdAt + "+03:00") || Date.now());
+  // Running Duration: count-up from PBI Assigned Time (date + time combined on server, already +03:00)
+  // Falls back to createdAt (date-only) if assignedAt is not present
+  const assignedMs  = useRef(Date.parse(r.assignedAt ?? "") || Date.parse(r.createdAt) || Date.now());
   // Battery countdown starts from page load so it never shows depleted
   const mountMs     = useRef(Date.now());
   const [, setTick] = useState(0);

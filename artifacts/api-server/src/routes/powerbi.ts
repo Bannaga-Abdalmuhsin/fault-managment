@@ -133,49 +133,59 @@ router.get("/pbi/tickets/power", async (req, res) => {
           'Input Record'[Status] <> "Closed" &&
           CONTAINS(_hajjSites, [sid], 'Input Record'[SITE ID])
         ),
-        "ttNumber",     'Input Record'[TT Number],
-        "siteId",       'Input Record'[SITE ID],
-        "startDate",    'Input Record'[Start Date],
-        "status",       'Input Record'[Status],
-        "severity",     'Input Record'[TT Severity],
-        "siteLabel",    'Input Record'[Site label],
-        "chain",        'Input Record'[Chain],
-        "district",     'Input Record'[District],
-        "subcon",       'Input Record'[SubCon],
-        "region",       'Input Record'[Region],
-        "issue",        'Input Record'[Issue],
-        "foStaff",      'Input Record'[FO Staff],
-        "description",  'Input Record'[Problem Description],
-        "actionTaken",  'Input Record'[Action Taken],
-        "owner",        'Input Record'[Owner (Responsible)],
-        "powerSource",  'Input Record'[Power Source],
-        "durationMin",  'Input Record'[Duration NSA (Min)],
-        "totalDuration",'Input Record'[Total Duration NSA(D-H-M)],
-        "slaBreach",    'Input Record'[Time to SLA Breach (NSA)]
+        "ttNumber",      'Input Record'[TT Number],
+        "siteId",        'Input Record'[SITE ID],
+        "startDate",     'Input Record'[Start Date],
+        "assignedTime",  'Input Record'[Assigned Time],
+        "status",        'Input Record'[Status],
+        "severity",      'Input Record'[TT Severity],
+        "siteLabel",     'Input Record'[Site label],
+        "chain",         'Input Record'[Chain],
+        "district",      'Input Record'[District],
+        "subcon",        'Input Record'[SubCon],
+        "region",        'Input Record'[Region],
+        "issue",         'Input Record'[Issue],
+        "foStaff",       'Input Record'[FO Staff],
+        "description",   'Input Record'[Problem Description],
+        "actionTaken",   'Input Record'[Action Taken],
+        "owner",         'Input Record'[Owner (Responsible)],
+        "powerSource",   'Input Record'[Power Source],
+        "durationMin",   'Input Record'[Duration NSA (Min)],
+        "totalDuration", 'Input Record'[Total Duration NSA(D-H-M)],
+        "slaBreach",     'Input Record'[Time to SLA Breach (NSA)]
       )
     `);
-    const tickets = rows.map((r: any) => ({
-      id: r["[ttNumber]"],
-      ttNumber: r["[ttNumber]"],
-      siteId: r["[siteId]"],
-      siteName: r["[siteId]"],
-      type: "power",
-      status: mapStatus(r["[status]"]),
-      priority: mapSeverity(r["[severity]"]),
-      title: r["[issue]"] ?? r["[description]"] ?? "Power Issue",
-      description: r["[description]"],
-      actionTaken: r["[actionTaken]"],
-      assignedTo: r["[foStaff]"],
-      owner: r["[owner]"],
-      powerSource: r["[powerSource]"],
-      durationMin: r["[durationMin]"],
-      totalDuration: r["[totalDuration]"],
-      slaBreach: r["[slaBreach]"],
-      siteLabel: r["[siteLabel]"],
-      region: r["[region]"],
-      subcon: r["[subcon]"],
-      createdAt: r["[startDate]"],
-    }));
+    const tickets = rows.map((r: any) => {
+      // Combine Start Date + Assigned Time (PBI stores time-only as 1899-12-30Thh:mm:ss)
+      const datePart = (r["[startDate]"] ?? "").split("T")[0];          // "2026-05-13"
+      const timePart = (r["[assignedTime]"] ?? "").split("T")[1] ?? ""; // "16:21:00"
+      const assignedAt = datePart && timePart
+        ? `${datePart}T${timePart}+03:00`   // treat as Arabia Standard Time
+        : (r["[startDate]"] ?? "");
+      return {
+        id: r["[ttNumber]"],
+        ttNumber: r["[ttNumber]"],
+        siteId: r["[siteId]"],
+        siteName: r["[siteId]"],
+        type: "power",
+        status: mapStatus(r["[status]"]),
+        priority: mapSeverity(r["[severity]"]),
+        title: r["[issue]"] ?? r["[description]"] ?? "Power Issue",
+        description: r["[description]"],
+        actionTaken: r["[actionTaken]"],
+        assignedTo: r["[foStaff]"],
+        owner: r["[owner]"],
+        powerSource: r["[powerSource]"],
+        durationMin: r["[durationMin]"],
+        totalDuration: r["[totalDuration]"],
+        slaBreach: r["[slaBreach]"],
+        siteLabel: r["[siteLabel]"],
+        region: r["[region]"],
+        subcon: r["[subcon]"],
+        createdAt: r["[startDate]"],
+        assignedAt,
+      };
+    });
     res.json(tickets);
   } catch (err: any) {
     logger.error({ err }, "PBI power tickets error");
