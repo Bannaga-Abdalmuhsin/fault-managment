@@ -170,12 +170,6 @@ export default function Login({ onSuccess }: Props) {
             </button>
           </form>
 
-          {/* Footer */}
-          <div style={{ marginTop: 26, fontSize: 10,
-            color: "rgba(255,255,255,0.22)", lineHeight: 1.6 }}>
-            STC · ACES Managed Services · Hajj 1447<br />
-            Authorised users only
-          </div>
         </div>
       </div>
 
