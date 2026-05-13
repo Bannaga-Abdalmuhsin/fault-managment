@@ -128,8 +128,8 @@ function Glass({ children, style }: { children: React.ReactNode; style?: React.C
 // ─── Section label ─────────────────────────────────────────────────────────────
 function SLabel({ text }: { text: string }) {
   return (
-    <div style={{ fontSize: 8, fontWeight: 800, letterSpacing: "0.14em",
-      textTransform: "uppercase", color: "rgba(220,180,255,0.75)", marginBottom: 4 }}>
+    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.14em",
+      textTransform: "uppercase", color: "rgba(220,180,255,0.85)", marginBottom: 4 }}>
       {text}
     </div>
   );
@@ -142,8 +142,8 @@ function KpiRow({ label, value, accent }: { label: string; value: number | strin
       padding: "2px 7px", borderRadius: 5,
       background: "rgba(255,255,255,0.07)",
       border: "1px solid rgba(255,255,255,0.06)" }}>
-      <span style={{ fontSize: 9, color: "rgba(255,255,255,0.82)", fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 13, fontWeight: 900, color: accent, lineHeight: 1 }}>{value}</span>
+      <span style={{ fontSize: 11, color: "rgba(255,255,255,0.9)", fontWeight: 700 }}>{label}</span>
+      <span style={{ fontSize: 16, fontWeight: 900, color: accent, lineHeight: 1 }}>{value}</span>
     </div>
   );
 }
@@ -156,8 +156,8 @@ function ZoneBar({ label, total, onAir }: { label: string; total: number; onAir:
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-        <span style={{ fontSize: 9.5, fontWeight: 700, color: "#fff" }}>{label}</span>
-        <span style={{ fontSize: 11, fontWeight: 900, color }}>
+        <span style={{ fontSize: 11.5, fontWeight: 700, color: "#fff" }}>{label}</span>
+        <span style={{ fontSize: 13, fontWeight: 900, color }}>
           {noData ? "N/A" : `${pct.toFixed(1)}%`}
         </span>
       </div>
@@ -166,7 +166,7 @@ function ZoneBar({ label, total, onAir }: { label: string; total: number; onAir:
           background: `linear-gradient(90deg, ${color}99, ${color})`,
           borderRadius: 3, transition: "width 0.6s ease" }} />
       </div>
-      <div style={{ fontSize: 8, color: "rgba(255,255,255,0.5)" }}>
+      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)" }}>
         {noData ? "loading…" : `${onAir} / ${total} on-air`}
       </div>
     </div>
@@ -177,7 +177,7 @@ function ZoneBar({ label, total, onAir }: { label: string; total: number; onAir:
 function FilterBtn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button onClick={onClick} style={{
-      padding: "4px 9px", fontSize: 10, fontWeight: 700, borderRadius: 20,
+      padding: "4px 9px", fontSize: 12, fontWeight: 700, borderRadius: 20,
       cursor: "pointer", transition: "all 0.15s",
       border: `1px solid ${active ? P.green : "rgba(255,255,255,0.28)"}`,
       background: active ? P.green : "rgba(255,255,255,0.1)",
@@ -189,12 +189,12 @@ function FilterBtn({ label, active, onClick }: { label: string; active: boolean;
 
 // ─── Shared table chrome ───────────────────────────────────────────────────────
 const TH_STYLE: React.CSSProperties = {
-  padding: "4px 8px", fontSize: 9, fontWeight: 700, textAlign: "left",
-  color: "rgba(220,180,255,0.9)", borderBottom: "1px solid rgba(255,255,255,0.1)",
+  padding: "5px 9px", fontSize: 11, fontWeight: 800, textAlign: "left",
+  color: "rgba(220,180,255,0.95)", borderBottom: "1px solid rgba(255,255,255,0.1)",
   position: "sticky", top: 0, background: "rgba(55,0,88,0.97)",
   letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap",
 };
-const TD_STYLE: React.CSSProperties = { padding: "3px 8px", fontSize: 11 };
+const TD_STYLE: React.CSSProperties = { padding: "4px 9px", fontSize: 12, fontWeight: 500 };
 
 function TableShell({ title, accent, count, loading, cols, children }: {
   title: string; accent: string; count: number; loading: boolean;
@@ -205,13 +205,13 @@ function TableShell({ title, accent, count, loading, cols, children }: {
       background: "rgba(75,0,110,0.88)", backdropFilter: "blur(14px)",
       border: `1px solid ${P.glassBorder}` }}>
       <div style={{ background: `linear-gradient(90deg, ${P.purpleDark}, ${P.purple})`,
-        color: "#fff", fontSize: 12, fontWeight: 700,
-        padding: "5px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-        <span style={{ width: 8, height: 8, borderRadius: "50%", display: "inline-block",
+        color: "#fff", fontSize: 14, fontWeight: 800,
+        padding: "6px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+        <span style={{ width: 9, height: 9, borderRadius: "50%", display: "inline-block",
           background: accent, boxShadow: `0 0 6px ${accent}` }} />
         {title}
         <span style={{ marginLeft: "auto", background: "rgba(255,255,255,0.15)",
-          borderRadius: 20, padding: "1px 10px", fontSize: 10 }}>
+          borderRadius: 20, padding: "1px 10px", fontSize: 12 }}>
           {loading ? "…" : `${count} active`}
         </span>
       </div>
@@ -422,9 +422,9 @@ export default function Dashboard() {
     <span key={`${pfx}-${i}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
       <span style={{ width: 7, height: 7, borderRadius: "50%", background: dotC(val),
         boxShadow: `0 0 6px ${dotC(val)}`, display: "inline-block" }} />
-      <span style={{ fontWeight: 700, color: "#fff", fontSize: 11 }}>{label}</span>
-      <span style={{ color: dotC(val), fontWeight: 900, fontSize: 11 }}>{val.toFixed(1)}%</span>
-      <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 10 }}>avail.</span>
+      <span style={{ fontWeight: 700, color: "#fff", fontSize: 13 }}>{label}</span>
+      <span style={{ color: dotC(val), fontWeight: 900, fontSize: 13 }}>{val.toFixed(1)}%</span>
+      <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>avail.</span>
       {i < tickerItems.length - 1 && sep}
     </span>
   ));
@@ -442,13 +442,13 @@ export default function Dashboard() {
         <img src="/stc-logo.png" alt="STC" style={{ height: 34, objectFit: "contain" }} />
 
         <div style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${P.glassBorder}`,
-          borderRadius: 8, padding: "3px 12px", fontSize: 10, color: "#fff", lineHeight: 1.6 }}>
-          <div style={{ fontWeight: 700, fontSize: 11 }}>{dateStr}</div>
+          borderRadius: 8, padding: "3px 12px", fontSize: 12, color: "#fff", lineHeight: 1.6 }}>
+          <div style={{ fontWeight: 700, fontSize: 13 }}>{dateStr}</div>
           <div style={{ opacity: 0.7 }}>⟳ {timeStr}</div>
         </div>
 
         <div style={{ flex: 1, textAlign: "center" }}>
-          <div style={{ fontSize: 20, fontWeight: 900, color: "#fff", letterSpacing: 0.5,
+          <div style={{ fontSize: 24, fontWeight: 900, color: "#fff", letterSpacing: 0.5,
             textShadow: "0 2px 16px rgba(0,0,0,0.4)" }}>
             COW HAJJ 1447 — Interactive Status
           </div>
@@ -460,7 +460,7 @@ export default function Dashboard() {
           borderRadius: 20, padding: "4px 13px" }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: P.green,
             boxShadow: `0 0 8px ${P.green}`, display: "inline-block", animation: "pulse 2s infinite" }} />
-          <span style={{ color: P.green, fontSize: 11, fontWeight: 700 }}>LIVE</span>
+          <span style={{ color: P.green, fontSize: 13, fontWeight: 800 }}>LIVE</span>
         </div>
 
         <img src="/aces-logo.png" alt="ACES" style={{ height: 52, objectFit: "contain" }} />
@@ -472,7 +472,7 @@ export default function Dashboard() {
             display: "flex", alignItems: "center", gap: 6, cursor: "pointer",
             background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.15)",
             borderRadius: 8, padding: "5px 11px", color: "rgba(255,255,255,0.7)",
-            fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", transition: "all 0.2s",
+            fontSize: 13, fontWeight: 700, letterSpacing: "0.04em", transition: "all 0.2s",
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.18)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(239,68,68,0.45)"; (e.currentTarget as HTMLButtonElement).style.color = "#FCA5A5"; }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.07)"; (e.currentTarget as HTMLButtonElement).style.borderColor = "rgba(255,255,255,0.15)"; (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.7)"; }}
@@ -533,7 +533,7 @@ export default function Dashboard() {
           <div>
             <SLabel text="Site ID" />
             <select value={cowIdFilter} onChange={e => setCowIdFilter(e.target.value)}
-              style={{ width: "100%", fontSize: 11, background: "rgba(255,255,255,0.1)",
+              style={{ width: "100%", fontSize: 13, background: "rgba(255,255,255,0.1)",
                 border: "1px solid rgba(255,255,255,0.22)", borderRadius: 6,
                 padding: "5px 8px", color: "#fff", cursor: "pointer", outline: "none" }}>
               <option value="All" style={{ background: P.purpleDeep }}>All Sites</option>
@@ -549,7 +549,7 @@ export default function Dashboard() {
             <div style={{ display: "flex", gap: 5 }}>
               {["Open", "Closed"].map(s => (
                 <button key={s} onClick={() => setStatusFilter(s)} style={{
-                  flex: 1, padding: "5px 0", fontSize: 11, fontWeight: 700, borderRadius: 6,
+                  flex: 1, padding: "5px 0", fontSize: 13, fontWeight: 700, borderRadius: 6,
                   border: "none", cursor: "pointer",
                   background: statusFilter === s ? P.green : "rgba(255,255,255,0.1)",
                   color: statusFilter === s ? P.purpleDeep : "#fff",
@@ -569,7 +569,7 @@ export default function Dashboard() {
               <SLabel text="Area Classification" />
               {areaFilter && (
                 <button onClick={() => setAreaFilter(null)} style={{
-                  fontSize: 9, padding: "1px 8px", borderRadius: 10, cursor: "pointer",
+                  fontSize: 11, padding: "1px 8px", borderRadius: 10, cursor: "pointer",
                   border: "1px solid rgba(200,140,255,0.45)", background: "rgba(200,140,255,0.15)",
                   color: "rgba(200,140,255,0.95)" }}>All</button>
               )}
@@ -587,11 +587,11 @@ export default function Dashboard() {
                     border: active ? `1px solid ${P.glassBorder}` : "1px solid rgba(200,140,255,0.15)",
                     boxShadow: active ? "0 0 10px rgba(107,31,162,0.55)" : "none" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 10, fontWeight: 600,
-                        color: active ? "#fff" : "rgba(255,255,255,0.82)" }}>{label}</span>
-                      <span style={{ fontSize: 11, fontWeight: 900, color: col }}>
-                        {onAir}<span style={{ fontSize: 9, color: "rgba(255,255,255,0.35)",
-                          fontWeight: 400 }}>/{total}</span>
+                      <span style={{ fontSize: 12, fontWeight: 700,
+                        color: active ? "#fff" : "rgba(255,255,255,0.88)" }}>{label}</span>
+                      <span style={{ fontSize: 13, fontWeight: 900, color: col }}>
+                        {onAir}<span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)",
+                          fontWeight: 500 }}>/{total}</span>
                       </span>
                     </div>
                     <div style={{ marginTop: 3, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.1)" }}>
@@ -622,8 +622,8 @@ export default function Dashboard() {
           ].map(({ label, value, accent }) => (
             <Glass key={label} style={{ padding: "10px 14px",
               display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span style={{ fontSize: 11, color: "rgba(255,255,255,0.82)", fontWeight: 500 }}>{label}</span>
-              <span style={{ fontSize: 18, fontWeight: 900, color: accent, lineHeight: 1 }}>{value}</span>
+              <span style={{ fontSize: 13, color: "rgba(255,255,255,0.9)", fontWeight: 700 }}>{label}</span>
+              <span style={{ fontSize: 22, fontWeight: 900, color: accent, lineHeight: 1 }}>{value}</span>
             </Glass>
           ))}
         </div>
@@ -636,7 +636,7 @@ export default function Dashboard() {
               <div key={label} style={{ display: "flex", alignItems: "center", gap: 7 }}>
                 <div style={{ width: 9, height: 9, borderRadius: "50%",
                   background: color, boxShadow: `0 0 6px ${color}` }} />
-                <span style={{ fontSize: 10, fontWeight: 600, color: "#fff" }}>{label}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{label}</span>
               </div>
             ))}
         </Glass>
