@@ -113,8 +113,7 @@ router.get("/pbi/tickets/power", async (req, res) => {
       EVALUATE
       SELECTCOLUMNS(
         FILTER('Input Record',
-          'Input Record'[Status] <> "Closed" &&
-          'Input Record'[Region] = "WR-HAJJ"
+          'Input Record'[Status] <> "Closed"
         ),
         "ttNumber",     'Input Record'[TT Number],
         "siteId",       'Input Record'[SITE ID],
@@ -174,8 +173,7 @@ router.get("/pbi/tickets/telecom", async (req, res) => {
       EVALUATE
       SELECTCOLUMNS(
         FILTER(SIR,
-          SIR[Status] <> "Closed" &&
-          SIR[Region] = "WR-HAJJ"
+          SIR[Status] <> "Closed"
         ),
         "ttNumber",      SIR[TT Number],
         "siteId",        SIR[Site],
