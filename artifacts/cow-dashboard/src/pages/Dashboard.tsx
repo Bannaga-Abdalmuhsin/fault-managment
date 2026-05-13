@@ -359,11 +359,14 @@ export default function Dashboard() {
 
   // ── Map sites ──────────────────────────────────────────────────────────────
   const mapSites = useMemo(() => {
-    const openPower = new Set(
-      (powerTix ?? []).filter(t => t.status !== "closed").map(t => t.siteName)
-    );
+    // Power tickets: SIR table + any NSA ticket owned by "Power" team
+    const openPower = new Set([
+      ...(powerTix ?? []).filter(t => t.status !== "closed").map(t => t.siteName),
+      ...(telecomTix ?? []).filter(t => t.status !== "closed" && t.owner?.toLowerCase() === "power").map(t => t.siteName),
+    ]);
+    // NSA tickets: exclude ones already escalated to Power team (they show red)
     const openNsa = new Set(
-      (telecomTix ?? []).filter(t => t.status !== "closed").map(t => t.siteName)
+      (telecomTix ?? []).filter(t => t.status !== "closed" && t.owner?.toLowerCase() !== "power").map(t => t.siteName)
     );
     return areaSites
       .filter(s => s.latitude != null && s.longitude != null)
