@@ -55,7 +55,7 @@ const SITE_AREA: Record<string, string> = {
   // Makka Remote (Miqat Alssail + Behaitah Checkpoint + Shoaibah Checkpoints)
   CWN967:"Makka Remote", CWN998:"Makka Remote", CWN081:"Makka Remote",
 };
-const AREA_LIST = ["Arafat","Muzdalifah","Mina","Hajj Support","Makka Remote"] as const;
+const AREA_LIST = ["Arafat","Muzdalifah","Mina","Makka Remote"] as const;
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface PbiSite {
