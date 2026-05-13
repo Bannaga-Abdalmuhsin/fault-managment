@@ -120,6 +120,87 @@ function fmtHrs(hrs: number): string {
   if (h === 0) return `${m} min`;
   return m ? `${h}h ${m}m` : `${h}h`;
 }
+function fmtSec(totalSec: number): string {
+  if (totalSec <= 0) return "00:00:00";
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+
+// ─── Live at-risk site card with count-up + countdown timers ──────────────────
+type AtRiskEntry = {
+  id: string; siteName: string; title: string; createdAt: string;
+  powerSource?: string; remainingSAL?: number | null; durationMin?: number | null;
+  site?: { area?: string | null; powerConfig?: string; batteryUsefulTimeHrs?: number | null };
+};
+function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const startMs  = Date.parse(r.createdAt) || Date.now();
+  const elapsedS = Math.floor((Date.now() - startMs) / 1000);
+  const battHrs  = r.site?.batteryUsefulTimeHrs ?? null;
+  const totalS   = battHrs != null ? Math.round(battHrs * 3600) : null;
+  const remainS  = totalS != null ? Math.max(0, totalS - elapsedS) : null;
+
+  const battColor = remainS == null ? pal.orange
+    : remainS < 3600  ? pal.red
+    : remainS < 14400 ? pal.orange
+    : "#38D4FF";
+
+  const dbPower   = r.site?.powerConfig;
+  const cfgCode   = (r.powerSource ?? "").toString().toUpperCase();
+  const powerDesc = dbPower
+    ?? (cfgCode === "SG" ? "Commercial + Standby Generator"
+      : cfgCode === "SB" ? "Commercial + Standby Battery"
+      : cfgCode === "DG" ? "Commercial + Diesel Generator"
+      : cfgCode || "—");
+
+  const area = r.site?.area ?? "";
+  const eta  = area === "Makkah Remote" ? "30 min" : "15 min";
+
+  void tick;
+
+  return (
+    <div style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.30)",
+      borderRadius:8, padding:"10px 12px" }}>
+      <div style={{ fontSize:15, fontWeight:800, color:pal.orange, marginBottom:8, letterSpacing:"0.04em" }}>
+        {r.siteName}
+      </div>
+      <div style={{ fontSize:13, lineHeight:2.0 }}>
+        <Row label="Alarm"      value={r.title || "—"} />
+        <Row label="Power"      value={powerDesc} />
+        <Row label="ETA to Site" value={`${eta}${area ? ` (${area})` : ""}`} color="#38D4FF" />
+      </div>
+      <div style={{ marginTop:8, borderTop:"1px solid rgba(245,158,11,0.18)", paddingTop:8,
+        display:"flex", flexDirection:"column", gap:6 }}>
+        <div>
+          <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
+            color:"rgba(255,255,255,0.38)", marginBottom:3 }}>Running Duration</div>
+          <div style={{ fontSize:22, fontWeight:900, fontFamily:"monospace",
+            letterSpacing:"0.08em", color:pal.orange }}>
+            {fmtSec(elapsedS)}
+          </div>
+        </div>
+        {remainS !== null && (
+          <div>
+            <div style={{ fontSize:10, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
+              color:"rgba(255,255,255,0.38)", marginBottom:3 }}>Battery Remaining</div>
+            <div style={{ fontSize:22, fontWeight:900, fontFamily:"monospace",
+              letterSpacing:"0.08em", color:battColor,
+              animation: remainS < 300 ? "pulse 1s infinite" : undefined }}>
+              {remainS > 0 ? fmtSec(remainS) : "⚡ DEPLETED"}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 // ─── KPI row ───────────────────────────────────────────────────────────────────
 function KpiRow({ label, value, accent }: { label: string; value: number | string; accent: string }) {
@@ -665,48 +746,10 @@ export default function Dashboard() {
                 </span>
                 <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>({atRiskSites.length})</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" }}>
-                {atRiskSites.map(r => {
-                  // Battery time: prefer DB hours value, fall back to ticket minutes
-                  const battHrs  = r.site?.batteryUsefulTimeHrs;
-                  const battMins = r.remainingSAL ?? r.durationMin;
-                  const battDisplay = battHrs != null
-                    ? fmtHrs(battHrs)
-                    : battMins != null ? fmtMin(battMins) : "—";
-                  const battColor = battHrs != null
-                    ? (battHrs < 1 ? P.red : battHrs < 4 ? P.orange : "#38D4FF")
-                    : battMins != null
-                      ? (battMins < 60 ? P.red : battMins < 240 ? P.orange : "#38D4FF")
-                      : P.orange;
-                  // Power: DB human-readable label overrides PBI code
-                  const dbPower  = r.site?.powerConfig;
-                  const cfgCode  = (r.powerSource ?? "").toString().toUpperCase();
-                  const powerDesc = dbPower
-                    ?? (cfgCode === "SG" ? "Commercial + Standby Generator"
-                      : cfgCode === "SB" ? "Commercial + Standby Battery"
-                      : cfgCode === "DG" ? "Commercial + Diesel Generator"
-                      : cfgCode || "—");
-                  // ETA by area
-                  const area = r.site?.area ?? "";
-                  const eta  = area === "Makkah Remote" ? "30 min" : "15 min";
-                  return (
-                    <div key={r.id} style={{
-                      background: "rgba(245,158,11,0.07)",
-                      border: "1px solid rgba(245,158,11,0.30)",
-                      borderRadius: 8, padding: "8px 10px",
-                    }}>
-                      <div style={{ fontSize: 13, fontWeight: 800, color: P.orange, marginBottom: 7 }}>
-                        {r.siteName}
-                      </div>
-                      <div style={{ fontSize: 11, lineHeight: 2 }}>
-                        <Row label="Alarm"             value={r.title || "—"} />
-                        <Row label="Power"             value={powerDesc} />
-                        <Row label="Battery Useful Time" value={battDisplay} color={battColor} />
-                        <Row label="ETA to Site"       value={`${eta}${area ? ` (${area})` : ""}`} color="#38D4FF" />
-                      </div>
-                    </div>
-                  );
-                })}
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 380, overflowY: "auto" }}>
+                {atRiskSites.map(r => (
+                  <AtRiskCard key={r.id} r={r} pal={P} />
+                ))}
               </div>
             </Glass>
           )}
