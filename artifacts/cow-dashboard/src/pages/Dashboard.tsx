@@ -18,48 +18,13 @@ const P = {
   glassBorder: "rgba(200, 140, 255, 0.28)",
 };
 
-// ─── Hajj 1447 area → site mapping (from reference data) ──────────────────────
-const SITE_AREA: Record<string, string> = {
-  // Arafat (37)
-  CWN022:"Arafat", CWN996:"Arafat", CWN092:"Arafat", CWN080:"Arafat",
-  CWN960:"Arafat", CWN984:"Arafat", CWN076:"Arafat", CWN073:"Arafat",
-  CWN038:"Arafat", CWN923:"Arafat", CWN072:"Arafat", CWN901:"Arafat",
-  CWN020:"Arafat", CWN036:"Arafat", CWN085:"Arafat", CWN084:"Arafat",
-  CWN087:"Arafat", CWN075:"Arafat", CWN015:"Arafat", CWN078:"Arafat",
-  CWN083:"Arafat", CWN203:"Arafat", CWN212:"Arafat", CWN903:"Arafat",
-  CWN906:"Arafat", CWN914:"Arafat", CWN951:"Arafat", CWN956:"Arafat",
-  CWN980:"Arafat", CWN991:"Arafat", CWN050:"Arafat", CWN093:"Arafat",
-  CWN001:"Arafat", CWN108:"Arafat", CWN008:"Arafat", CWN105:"Arafat",
-  CWN102:"Arafat",
-  // Muzdalifah (29)
-  CWN213:"Muzdalifah", CWN208:"Muzdalifah", CWN099:"Muzdalifah",
-  CWN955:"Muzdalifah", CWN062:"Muzdalifah", CWN907:"Muzdalifah",
-  CWN101:"Muzdalifah", CWN915:"Muzdalifah", CWN997:"Muzdalifah",
-  CWH318:"Muzdalifah", CWN922:"Muzdalifah", CWN300:"Muzdalifah",
-  CWN992:"Muzdalifah", CWN206:"Muzdalifah", CWN205:"Muzdalifah",
-  CWN004:"Muzdalifah", CWN068:"Muzdalifah", CWN074:"Muzdalifah",
-  CWN089:"Muzdalifah", CWN202:"Muzdalifah", CWN214:"Muzdalifah",
-  CWN301:"Muzdalifah", CWN079:"Muzdalifah", CWN032:"Muzdalifah",
-  CWN972:"Muzdalifah", CWN211:"Muzdalifah", CWN104:"Muzdalifah",
-  CWN021:"Muzdalifah", CWN066:"Muzdalifah",
-  // Mina (10)
-  CWN970:"Mina", CWN959:"Mina", CWN961:"Mina", CWN002:"Mina",
-  CWN201:"Mina", CWN777:"Mina", CWN953:"Mina", CWN976:"Mina",
-  CWN978:"Mina", CWN994:"Mina",
-  // Hajj Support (15)
-  COW761:"Hajj Support", CWN026:"Hajj Support", CWN053:"Hajj Support",
-  CWN950:"Hajj Support", CWN962:"Hajj Support", COWTR01:"Hajj Support",
-  COW062:"Hajj Support", COW514:"Hajj Support", COW539:"Hajj Support",
-  COW610:"Hajj Support", COW666:"Hajj Support", COWTR02:"Hajj Support",
-  COW780:"Hajj Support", COW762:"Hajj Support", CWN103:"Hajj Support",
-  // Makka Remote (Miqat Alssail + Behaitah Checkpoint + Shoaibah Checkpoints)
-  CWN967:"Makka Remote", CWN998:"Makka Remote", CWN081:"Makka Remote",
-};
-const AREA_LIST = ["Arafat","Muzdalifah","Mina","Makka Remote"] as const;
+// Area list — values come directly from DB[Column13] in Power BI
+const AREA_LIST = ["Arafat","Muzdalifah","Mina","Makkah Remote"] as const;
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 interface PbiSite {
   id: string; name: string; region: string; zone: string;
+  area: string | null;
   siteLabel: string; latitude: number | null; longitude: number | null;
   status: "operational" | "offline";
 }
@@ -371,14 +336,14 @@ export default function Dashboard() {
   // ── Area-filtered sites ────────────────────────────────────────────────────
   const areaSites = useMemo(() => {
     const sites = pbiSites ?? [];
-    return areaFilter ? sites.filter(s => SITE_AREA[s.name] === areaFilter) : sites;
+    return areaFilter ? sites.filter(s => s.area === areaFilter) : sites;
   }, [pbiSites, areaFilter]);
 
   // ── Area classification rows — computed from pbiSites ─────────────────────
   const areaRows = useMemo(() => {
     const sites = pbiSites ?? [];
     return AREA_LIST.map(area => {
-      const s = sites.filter(x => SITE_AREA[x.name] === area);
+      const s = sites.filter(x => x.area === area);
       return { label: area, total: s.length, onAir: s.filter(x => x.status === "operational").length };
     });
   }, [pbiSites]);

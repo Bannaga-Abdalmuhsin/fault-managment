@@ -60,6 +60,7 @@ router.get("/pbi/sites", async (req, res) => {
         "siteId",        DB[Site ID],
         "region",        DB[Region],
         "zone",          DB[District],
+        "area",          DB[Column13],
         "technology",    DB[Technology],
         "siteLabel",     DB[Site label],
         "vendor",        DB[Vendor],
@@ -83,7 +84,8 @@ router.get("/pbi/sites", async (req, res) => {
         id: r["[siteId]"],
         name: r["[siteId]"],
         region: r["[region]"],
-        zone: r["[zone]"],      // district value e.g. "MAKKAH", "Riyadh District"
+        zone: r["[zone]"],
+        area: r["[area]"] ?? null,   // PBI area classification: Arafat / Muzdalifah / Mina / Makkah Remote
         technology: r["[technology]"],
         siteLabel: r["[siteLabel]"],
         vendor: r["[vendor]"],
