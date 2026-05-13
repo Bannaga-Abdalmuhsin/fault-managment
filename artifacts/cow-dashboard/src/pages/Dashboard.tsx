@@ -662,39 +662,36 @@ export default function Dashboard() {
               <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" }}>
                 {atRiskSites.map(r => {
                   const remaining = r.remainingSAL ?? r.durationMin;
-                  const riskColor = remaining == null ? P.orange
+                  const battColor = remaining == null ? P.orange
                     : remaining < 60  ? P.red
                     : remaining < 240 ? P.orange
                     : "#38D4FF";
-                  const psCode = (r.powerSource ?? "").toString().toUpperCase();
-                  const powerLabel = psCode === "SG" ? "Generator"
-                    : psCode === "SB" ? "Battery"
-                    : psCode === "GRID" ? "Grid"
-                    : psCode || "—";
-                  const riskLabel = (r.priority ?? r.severity ?? "").toUpperCase() || "OPEN";
+                  // Power config friendly label
+                  const cfgCode = ((r.site?.powerConfig ?? r.powerSource) ?? "").toString().toUpperCase();
+                  const powerDesc = cfgCode === "SG" ? "Commercial + Standby Generator"
+                    : cfgCode === "SB" ? "Commercial + Standby Battery"
+                    : cfgCode === "DG" ? "Commercial + Diesel Generator"
+                    : cfgCode || "—";
+                  // ETA by area
+                  const area = r.site?.area ?? "";
+                  const eta = area === "Makkah Remote" ? "30 min" : "15 min";
+                  const etaNote = area ? `(${area})` : "";
                   return (
                     <div key={r.id} style={{
                       background: "rgba(245,158,11,0.07)",
                       border: "1px solid rgba(245,158,11,0.30)",
                       borderRadius: 8, padding: "8px 10px",
                     }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-                        <span style={{ fontSize: 13, fontWeight: 800, color: P.orange }}>{r.siteName}</span>
-                        <span style={{
-                          fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 8,
-                          background: riskColor === P.red ? "rgba(239,68,68,0.22)" : "rgba(245,158,11,0.22)",
-                          color: riskColor, letterSpacing: "0.05em",
-                        }}>{riskLabel}</span>
+                      {/* Site ID header */}
+                      <div style={{ fontSize: 13, fontWeight: 800, color: P.orange, marginBottom: 7 }}>
+                        {r.siteName}
                       </div>
-                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.50)", marginBottom: 5, lineHeight: 1.3 }}>
-                        {r.title}
-                      </div>
-                      <div style={{ fontSize: 11, lineHeight: 1.9 }}>
-                        <Row label="Power" value={`${powerLabel}${psCode ? ` (${psCode})` : ""}`} />
-                        {r.site?.powerConfig && <Row label="Config" value={r.site.powerConfig} />}
-                        <Row label="Backup" value={remaining != null ? fmtMin(remaining) : (r.totalDuration || "—")} color={riskColor} />
-                        <Row label="Running" value={r.totalDuration || "—"} />
-                        <Row label="SLA in" value={r.slaBreach || "—"} />
+                      {/* 4 required fields */}
+                      <div style={{ fontSize: 11, lineHeight: 2 }}>
+                        <Row label="Alarm"        value={r.title || "—"} />
+                        <Row label="Power"        value={powerDesc} />
+                        <Row label="Battery Time" value={remaining != null ? fmtMin(remaining) : (r.totalDuration || "—")} color={battColor} />
+                        <Row label="ETA"          value={`${eta} ${etaNote}`} color="#38D4FF" />
                       </div>
                     </div>
                   );
