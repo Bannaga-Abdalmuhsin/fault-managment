@@ -523,7 +523,7 @@ export default function Dashboard() {
             <img src="/stc-logo.png" alt="STC"
               style={{ position: "absolute", bottom: 22, left: "50%",
                 transform: "translateX(-50%)",
-                height: 28, objectFit: "contain",
+                height: 18, objectFit: "contain",
                 filter: "brightness(0) invert(1) drop-shadow(0 1px 4px rgba(0,0,0,0.9))" }} />
           </div>
         </div>
