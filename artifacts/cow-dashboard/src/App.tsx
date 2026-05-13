@@ -35,7 +35,7 @@ export default function App() {
     return (
       <div style={{
         minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-        background: "linear-gradient(135deg, #1A0533 0%, #2D0654 40%, #1A0533 100%)",
+        background: "linear-gradient(135deg, #14002A 0%, #280050 40%, #14002A 100%)",
       }}>
         <div style={{ width: 36, height: 36, borderRadius: "50%",
           border: "3px solid rgba(200,140,255,0.2)", borderTopColor: "#C792FF",

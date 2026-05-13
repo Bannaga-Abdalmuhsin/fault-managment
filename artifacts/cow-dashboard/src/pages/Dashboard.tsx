@@ -191,7 +191,7 @@ function FilterBtn({ label, active, onClick }: { label: string; active: boolean;
 const TH_STYLE: React.CSSProperties = {
   padding: "5px 9px", fontSize: 11, fontWeight: 800, textAlign: "left",
   color: "rgba(220,180,255,0.95)", borderBottom: "1px solid rgba(255,255,255,0.1)",
-  position: "sticky", top: 0, background: "rgba(55,0,88,0.97)",
+  position: "sticky", top: 0, background: "rgba(50,0,100,0.97)",
   letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap",
 };
 const TD_STYLE: React.CSSProperties = { padding: "4px 9px", fontSize: 12, fontWeight: 500 };
@@ -202,7 +202,7 @@ function TableShell({ title, accent, count, loading, cols, children }: {
 }) {
   return (
     <div style={{ borderRadius: 10, overflow: "hidden", display: "flex", flexDirection: "column",
-      background: "rgba(75,0,110,0.88)", backdropFilter: "blur(14px)",
+      background: "rgba(78,0,142,0.88)", backdropFilter: "blur(14px)",
       border: `1px solid ${P.glassBorder}` }}>
       <div style={{ background: `linear-gradient(90deg, ${P.purpleDark}, ${P.purple})`,
         color: "#fff", fontSize: 14, fontWeight: 800,
@@ -437,7 +437,7 @@ export default function Dashboard() {
       {/* ══ HEADER ════════════════════════════════════════════════════════════ */}
       <div style={{ background: `linear-gradient(135deg, ${P.purpleDeep} 0%, ${P.purpleDark} 45%, ${P.purple} 100%)`,
         padding: "0 18px", display: "flex", alignItems: "center", gap: 14,
-        flexShrink: 0, height: 54, boxShadow: "0 3px 20px rgba(75,0,110,0.6)" }}>
+        flexShrink: 0, height: 54, boxShadow: "0 3px 20px rgba(78,0,142,0.6)" }}>
 
         <img src="/stc-logo.png" alt="STC" style={{ height: 34, objectFit: "contain" }} />
 
@@ -515,7 +515,7 @@ export default function Dashboard() {
         {/* ── Ticker ────────────────────────────────────────────────────── */}
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 1000,
           height: 28, overflow: "hidden",
-          background: "rgba(55,0,88,0.88)", backdropFilter: "blur(12px)",
+          background: "rgba(50,0,100,0.88)", backdropFilter: "blur(12px)",
           borderBottom: "1px solid rgba(200,140,255,0.2)",
           display: "flex", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center",
@@ -582,10 +582,10 @@ export default function Dashboard() {
                 return (
                   <button key={label} onClick={() => setAreaFilter(active ? null : label)} style={{
                     width: "100%", textAlign: "left", cursor: "pointer",
-                    background: active ? "rgba(107,31,162,0.6)" : "rgba(255,255,255,0.06)",
+                    background: active ? "rgba(78,0,142,0.6)" : "rgba(255,255,255,0.06)",
                     borderRadius: 7, padding: "5px 8px",
                     border: active ? `1px solid ${P.glassBorder}` : "1px solid rgba(200,140,255,0.15)",
-                    boxShadow: active ? "0 0 10px rgba(107,31,162,0.55)" : "none" }}>
+                    boxShadow: active ? "0 0 10px rgba(78,0,142,0.55)" : "none" }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <span style={{ fontSize: 12, fontWeight: 700,
                         color: active ? "#fff" : "rgba(255,255,255,0.88)" }}>{label}</span>
@@ -670,7 +670,7 @@ export default function Dashboard() {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
         }
-        select option { background: #1A0533; }
+        select option { background: #14002A; }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: rgba(255,255,255,0.04); }
         ::-webkit-scrollbar-thumb { background: rgba(200,140,255,0.35); border-radius: 4px; }

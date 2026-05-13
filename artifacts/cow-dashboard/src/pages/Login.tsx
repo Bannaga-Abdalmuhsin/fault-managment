@@ -158,11 +158,11 @@ export default function Login({ onSuccess }: Props) {
               style={{
                 marginTop: 4, padding: "13px", borderRadius: 10, border: "none",
                 background: loading
-                  ? "rgba(107,31,162,0.5)"
-                  : "linear-gradient(135deg, #6B1FA2, #9B3DCC)",
+                  ? "rgba(78,0,142,0.5)"
+                  : "linear-gradient(135deg, #4E008E, #7B1AC0)",
                 color: "#fff", fontSize: 14, fontWeight: 700,
                 cursor: loading ? "not-allowed" : "pointer",
-                boxShadow: loading ? "none" : "0 4px 20px rgba(107,31,162,0.5)",
+                boxShadow: loading ? "none" : "0 4px 20px rgba(78,0,142,0.5)",
                 transition: "all 0.2s", letterSpacing: "0.04em",
               }}
             >
