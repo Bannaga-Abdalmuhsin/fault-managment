@@ -626,64 +626,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* ── At-Risk Sites: pre-outage warning ─────────────────────── */}
-          {atRiskSites.length > 0 && (
-            <>
-              <div style={{ height: 1, background: "rgba(200,140,255,0.2)", margin: "0 -2px" }} />
-              <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 6 }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", color: P.orange }}>
-                    ⚠ AT-RISK SITES
-                  </span>
-                  <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>({atRiskSites.length})</span>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 340, overflowY: "auto" }}>
-                  {atRiskSites.map(r => {
-                    const remaining = r.remainingSAL ?? r.durationMin;
-                    const riskColor = remaining == null ? P.orange
-                      : remaining < 60  ? P.red
-                      : remaining < 240 ? P.orange
-                      : "#38D4FF";
-                    const psCode = (r.powerSource ?? "").toString().toUpperCase();
-                    const powerLabel = psCode === "SG" ? "Generator"
-                      : psCode === "SB" ? "Battery"
-                      : psCode === "GRID" ? "Grid"
-                      : psCode || "—";
-                    const riskLabel = (r.priority ?? r.severity ?? "").toUpperCase() || "OPEN";
-                    return (
-                      <div key={r.id} style={{
-                        background: "rgba(245,158,11,0.07)",
-                        border: "1px solid rgba(245,158,11,0.30)",
-                        borderRadius: 8, padding: "8px 10px",
-                      }}>
-                        {/* Site ID + risk badge */}
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-                          <span style={{ fontSize: 13, fontWeight: 800, color: P.orange }}>{r.siteName}</span>
-                          <span style={{
-                            fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 8,
-                            background: riskColor === P.red ? "rgba(239,68,68,0.22)" : "rgba(245,158,11,0.22)",
-                            color: riskColor, letterSpacing: "0.05em",
-                          }}>{riskLabel}</span>
-                        </div>
-                        {/* Issue title */}
-                        <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)", marginBottom: 5, lineHeight: 1.3 }}>
-                          {r.title}
-                        </div>
-                        {/* Detail rows */}
-                        <div style={{ fontSize: 11, lineHeight: 1.9 }}>
-                          <Row label="Power" value={`${powerLabel}${psCode ? ` (${psCode})` : ""}`} />
-                          {r.site?.powerConfig && <Row label="Config" value={r.site.powerConfig} />}
-                          <Row label="Backup" value={remaining != null ? fmtMin(remaining) : (r.totalDuration || "—")} color={riskColor} />
-                          <Row label="Running" value={r.totalDuration || "—"} />
-                          <Row label="SLA in" value={r.slaBreach || "—"} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
         </Glass>
 
         {/* ── RIGHT: gauge panel (top) ────────────────────────────────────── */}
@@ -707,6 +649,59 @@ export default function Dashboard() {
               <span style={{ fontSize: 22, fontWeight: 900, color: accent, lineHeight: 1 }}>{value}</span>
             </Glass>
           ))}
+
+          {/* ── At-Risk Sites: pre-outage warning ─────────────────────── */}
+          {atRiskSites.length > 0 && (
+            <Glass style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", color: P.orange }}>
+                  ⚠ AT-RISK SITES
+                </span>
+                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>({atRiskSites.length})</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 320, overflowY: "auto" }}>
+                {atRiskSites.map(r => {
+                  const remaining = r.remainingSAL ?? r.durationMin;
+                  const riskColor = remaining == null ? P.orange
+                    : remaining < 60  ? P.red
+                    : remaining < 240 ? P.orange
+                    : "#38D4FF";
+                  const psCode = (r.powerSource ?? "").toString().toUpperCase();
+                  const powerLabel = psCode === "SG" ? "Generator"
+                    : psCode === "SB" ? "Battery"
+                    : psCode === "GRID" ? "Grid"
+                    : psCode || "—";
+                  const riskLabel = (r.priority ?? r.severity ?? "").toUpperCase() || "OPEN";
+                  return (
+                    <div key={r.id} style={{
+                      background: "rgba(245,158,11,0.07)",
+                      border: "1px solid rgba(245,158,11,0.30)",
+                      borderRadius: 8, padding: "8px 10px",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: P.orange }}>{r.siteName}</span>
+                        <span style={{
+                          fontSize: 9, fontWeight: 800, padding: "1px 6px", borderRadius: 8,
+                          background: riskColor === P.red ? "rgba(239,68,68,0.22)" : "rgba(245,158,11,0.22)",
+                          color: riskColor, letterSpacing: "0.05em",
+                        }}>{riskLabel}</span>
+                      </div>
+                      <div style={{ fontSize: 10, color: "rgba(255,255,255,0.50)", marginBottom: 5, lineHeight: 1.3 }}>
+                        {r.title}
+                      </div>
+                      <div style={{ fontSize: 11, lineHeight: 1.9 }}>
+                        <Row label="Power" value={`${powerLabel}${psCode ? ` (${psCode})` : ""}`} />
+                        {r.site?.powerConfig && <Row label="Config" value={r.site.powerConfig} />}
+                        <Row label="Backup" value={remaining != null ? fmtMin(remaining) : (r.totalDuration || "—")} color={riskColor} />
+                        <Row label="Running" value={r.totalDuration || "—"} />
+                        <Row label="SLA in" value={r.slaBreach || "—"} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </Glass>
+          )}
         </div>
 
         {/* ── Map legend (bottom-left, above Leaflet attribution) ────────── */}
