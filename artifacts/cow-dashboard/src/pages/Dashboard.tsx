@@ -373,13 +373,12 @@ export default function Dashboard() {
     });
   }, [pbiSites]);
 
-  // ── Availability ───────────────────────────────────────────────────────────
-  const overallAvail = kpis?.sites.availability ?? 100;
+  // ── Availability — always computed from sites data (PMP-Status-aware) ────
   const areaAvail = useMemo(() => {
-    if (!areaFilter || areaSites.length === 0) return overallAvail;
+    if (areaSites.length === 0) return 100;
     const on = areaSites.filter(s => s.status === "operational").length;
     return Math.round((on / areaSites.length) * 1000) / 10;
-  }, [areaFilter, areaSites, overallAvail]);
+  }, [areaSites]);
 
   const totalSites = areaFilter ? areaSites.length : (kpis?.sites.total ?? 0);
 

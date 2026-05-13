@@ -273,7 +273,7 @@ router.get("/pbi/kpis", async (req, res) => {
         EVALUATE
         ROW(
           "total",       CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ"),
-          "onAir",       CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[MSC ID] = "ON-AIR"),
+          "onAir",       CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[MSC ID] = "ON-AIR", DB[PMP Status] <> "Down"),
           "vvvip",       CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[Site label] = "VVVIP"),
           "vvip",        CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[Site label] = "VVIP"),
           "vip",         CALCULATE(COUNTROWS(DB), DB[Region] = "WR-HAJJ", DB[Site label] = "VIP"),
