@@ -33,7 +33,7 @@ interface PbiTicket {
   type: "power" | "telecom"; status: string; priority: string;
   title: string; description: string; actionTaken: string;
   assignedTo: string; durationMin: number | null;
-  totalDuration: string; slaBreach: string; createdAt: string;
+  totalDuration: string; slaBreach: string; createdAt: string; assignedAt?: string;
   // power/supply fields
   powerSource?: string; batteryStatus?: string; owner?: string; subcon?: string;
   // NSA-specific fields
@@ -135,9 +135,12 @@ type AtRiskEntry = {
   site?: { area?: string | null; powerConfig?: string; batteryUsefulTimeHrs?: number | null };
 };
 function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) {
-  // Running Duration: count-up from PBI Assigned Time (date + time combined on server, already +03:00)
-  // Falls back to createdAt (date-only) if assignedAt is not present
-  const assignedMs  = useRef(Date.parse(r.assignedAt ?? "") || Date.parse(r.createdAt) || Date.now());
+  // Running Duration: count-up from PBI Assigned Time — useMemo so it recalculates when data refreshes
+  // Falls back to createdAt if assignedAt is absent
+  const assignedMs = useMemo(
+    () => Date.parse(r.assignedAt ?? "") || Date.parse(r.createdAt) || Date.now(),
+    [r.assignedAt, r.createdAt],
+  );
   // Battery countdown starts from page load so it never shows depleted
   const mountMs     = useRef(Date.now());
   const [, setTick] = useState(0);
