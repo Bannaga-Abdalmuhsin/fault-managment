@@ -250,9 +250,17 @@ function LeafletMap({ sites, areaFilter }: Map3DProps) {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const view = AREA_VIEWS[areaFilter] ?? AREA_VIEWS["All"];
-    map.flyTo(view.center, view.zoom, { duration: 1.5 });
-  }, [areaFilter]);
+    if (areaFilter === "All" && sites.length > 0) {
+      const validSites = sites.filter(s => s.latitude != null && s.longitude != null);
+      if (validSites.length > 0) {
+        const bounds = L.latLngBounds(validSites.map(s => [s.latitude!, s.longitude!]));
+        map.flyToBounds(bounds, { padding: [40, 40], duration: 1.5, maxZoom: 13 });
+      }
+    } else {
+      const view = AREA_VIEWS[areaFilter] ?? AREA_VIEWS["All"];
+      map.flyTo(view.center, view.zoom, { duration: 1.5 });
+    }
+  }, [areaFilter, sites]);
 
   useEffect(() => {
     const map = mapRef.current;
