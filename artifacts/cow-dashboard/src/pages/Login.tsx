@@ -73,12 +73,10 @@ export default function Login({ onSuccess }: Props) {
           border: "1px solid rgba(200,140,255,0.28)", borderRadius: 20,
           boxShadow: "0 32px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(200,140,255,0.08)",
         }}>
-          {/* Top logos row */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 34 }}>
-            <img src="/stc-logo.png" alt="STC"
-              style={{ height: 36, objectFit: "contain", filter: "brightness(1.1)" }} />
+          {/* ACES logo */}
+          <div style={{ marginBottom: 34 }}>
             <img src="/aces-logo.png" alt="ACES Managed Services"
-              style={{ height: 44, objectFit: "contain" }} />
+              style={{ height: 70, objectFit: "contain" }} />
           </div>
 
           {/* Title */}
