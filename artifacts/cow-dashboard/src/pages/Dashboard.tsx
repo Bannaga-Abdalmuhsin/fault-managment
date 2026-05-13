@@ -507,9 +507,16 @@ export default function Dashboard() {
         {/* At h=140: transparent-top=15px → top=28-15=13 to align content below ticker */}
         <div style={{ position: "absolute", top: 13, right: "calc(50% + 150px)",
           zIndex: 950, pointerEvents: "none" }}>
-          <img src="/cow-truck-icon.png" alt="COW Truck"
-            style={{ height: 140, objectFit: "contain",
-              filter: "brightness(0) invert(1) drop-shadow(0 2px 10px rgba(0,0,0,0.8))" }} />
+          <div style={{ position: "relative", display: "inline-block" }}>
+            <img src="/cow-truck-icon.png" alt="COW Truck"
+              style={{ height: 140, objectFit: "contain",
+                filter: "brightness(0) invert(1) drop-shadow(0 2px 10px rgba(0,0,0,0.8))" }} />
+            <img src="/stc-logo.png" alt="STC"
+              style={{ position: "absolute", bottom: 22, left: "50%",
+                transform: "translateX(-50%)",
+                height: 28, objectFit: "contain",
+                filter: "brightness(0) invert(1) drop-shadow(0 1px 4px rgba(0,0,0,0.9))" }} />
+          </div>
         </div>
 
         {/* ── Ticker ────────────────────────────────────────────────────── */}
