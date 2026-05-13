@@ -196,22 +196,30 @@ const TH_STYLE: React.CSSProperties = {
 };
 const TD_STYLE: React.CSSProperties = { padding: "4px 9px", fontSize: 12, fontWeight: 500 };
 
-function TableShell({ title, accent, count, loading, cols, children }: {
+function TableShell({ title, accent, count, loading, cols, children, alert }: {
   title: string; accent: string; count: number; loading: boolean;
-  cols: string[]; children: React.ReactNode;
+  cols: string[]; children: React.ReactNode; alert?: boolean;
 }) {
   return (
     <div style={{ borderRadius: 10, overflow: "hidden", display: "flex", flexDirection: "column",
       background: "rgba(78,0,142,0.88)", backdropFilter: "blur(14px)",
-      border: `1px solid ${P.glassBorder}` }}>
-      <div style={{ background: `linear-gradient(90deg, ${P.purpleDark}, ${P.purple})`,
+      border: alert ? `1px solid ${accent}88` : `1px solid ${P.glassBorder}`,
+      boxShadow: alert ? `0 0 18px ${accent}33` : "none",
+      transition: "border 0.3s, box-shadow 0.3s" }}>
+      <div style={{ background: alert
+          ? `linear-gradient(90deg, ${accent}55, ${accent}33)`
+          : `linear-gradient(90deg, ${P.purpleDark}, ${P.purple})`,
         color: "#fff", fontSize: 14, fontWeight: 800,
-        padding: "6px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+        padding: "6px 12px", display: "flex", alignItems: "center", gap: 8,
+        transition: "background 0.3s" }}>
         <span style={{ width: 9, height: 9, borderRadius: "50%", display: "inline-block",
-          background: accent, boxShadow: `0 0 6px ${accent}` }} />
+          background: accent, boxShadow: `0 0 8px ${accent}`,
+          animation: alert ? "pulse 1.4s infinite" : "none" }} />
         {title}
-        <span style={{ marginLeft: "auto", background: "rgba(255,255,255,0.15)",
-          borderRadius: 20, padding: "1px 10px", fontSize: 12 }}>
+        <span style={{ marginLeft: "auto",
+          background: alert ? `${accent}44` : "rgba(255,255,255,0.15)",
+          borderRadius: 20, padding: "1px 10px", fontSize: 12,
+          color: alert ? "#fff" : "inherit", fontWeight: alert ? 800 : 400 }}>
           {loading ? "…" : `${count} active`}
         </span>
       </div>
@@ -313,8 +321,9 @@ function NsaTicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
 function PowerTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading: boolean }) {
   const cols = ["Site","#Physical","District","Site label","Total Duration","Time to SLA Breach","Remaining SAL (Min)","Alarms Description","Comment"];
   return (
-    <TableShell title="Running Power Outage Tickets" accent={P.orange}
-      count={tickets.length} loading={loading} cols={cols}>
+    <TableShell title="Running Power Outage Tickets" accent={P.red}
+      count={tickets.length} loading={loading} cols={cols}
+      alert={!loading && tickets.length > 0}>
       {loading
         ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: 12, padding: 14 }}>Loading…</td></tr>
         : tickets.length === 0
@@ -328,8 +337,9 @@ function PowerTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading:
 function NsaTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading: boolean }) {
   const cols = ["Site ID","Chain","District","Site Label","TT Severity","Total Duration","Time to SLA Breach","Remaining SAL (MIN)","Problem Description"];
   return (
-    <TableShell title="Running NSA Tickets" accent="#C792FF"
-      count={tickets.length} loading={loading} cols={cols}>
+    <TableShell title="Running NSA Tickets" accent={P.orange}
+      count={tickets.length} loading={loading} cols={cols}
+      alert={!loading && tickets.length > 0}>
       {loading
         ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: 12, padding: 14 }}>Loading…</td></tr>
         : tickets.length === 0
