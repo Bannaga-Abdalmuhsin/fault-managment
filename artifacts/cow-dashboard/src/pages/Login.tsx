@@ -75,8 +75,8 @@ export default function Login({ onSuccess }: Props) {
         }}>
           {/* ACES logo */}
           <div style={{ marginBottom: 34 }}>
-            <img src="/aces-logo.png" alt="ACES Managed Services"
-              style={{ height: 70, objectFit: "contain" }} />
+            <img src="/aces-logo-login.png" alt="ACES Managed Services"
+              style={{ height: 130, objectFit: "contain", marginLeft: -10 }} />
           </div>
 
           {/* Title */}
