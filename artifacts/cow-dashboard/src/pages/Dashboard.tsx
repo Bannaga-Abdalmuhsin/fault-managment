@@ -621,7 +621,6 @@ export default function Dashboard() {
             { label: "Total Sites",            value: totalSites,            accent: "#fff"   },
             { label: "Power Tickets (Open)",   value: filteredPower.length,  accent: P.orange },
             { label: "Telecom Tickets (Open)", value: filteredTelecom.length,accent: "#C792FF"},
-            { label: "Critical Power TTs",     value: kpis?.power.critical ?? "…", accent: P.red },
           ].map(({ label, value, accent }) => (
             <Glass key={label} style={{ padding: "10px 14px",
               display: "flex", alignItems: "center", justifyContent: "space-between" }}>
