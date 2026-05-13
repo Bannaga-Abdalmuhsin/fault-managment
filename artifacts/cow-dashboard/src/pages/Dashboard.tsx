@@ -563,9 +563,9 @@ export default function Dashboard() {
           {/* Divider */}
           <div style={{ height: 1, background: "rgba(200,140,255,0.2)", margin: "0 -2px" }} />
 
-          {/* Area Classification — clickable filter cards with availability bar */}
+          {/* Area Classification — individual cards */}
           <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
               <SLabel text="Area Classification" />
               {areaFilter && (
                 <button onClick={() => setAreaFilter(null)} style={{
@@ -574,7 +574,7 @@ export default function Dashboard() {
                   color: "rgba(200,140,255,0.95)" }}>All</button>
               )}
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {areaRows.map(({ label, total, onAir }) => {
                 const pct = total ? Math.round((onAir / total) * 100) : 0;
                 const col = total === 0 ? "rgba(255,255,255,0.25)" : pct >= 95 ? P.green : pct >= 80 ? P.orange : P.red;
@@ -582,21 +582,35 @@ export default function Dashboard() {
                 return (
                   <button key={label} onClick={() => setAreaFilter(active ? null : label)} style={{
                     width: "100%", textAlign: "left", cursor: "pointer",
-                    background: active ? "rgba(78,0,142,0.6)" : "rgba(255,255,255,0.06)",
-                    borderRadius: 7, padding: "5px 8px",
-                    border: active ? `1px solid ${P.glassBorder}` : "1px solid rgba(200,140,255,0.15)",
-                    boxShadow: active ? "0 0 10px rgba(78,0,142,0.55)" : "none" }}>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <span style={{ fontSize: 12, fontWeight: 700,
-                        color: active ? "#fff" : "rgba(255,255,255,0.88)" }}>{label}</span>
-                      <span style={{ fontSize: 13, fontWeight: 900, color: col }}>
-                        {onAir}<span style={{ fontSize: 11, color: "rgba(255,255,255,0.45)",
-                          fontWeight: 500 }}>/{total}</span>
+                    background: active ? "rgba(78,0,142,0.7)" : "rgba(255,255,255,0.05)",
+                    borderRadius: 10, padding: "10px 12px",
+                    border: active ? `1px solid ${P.glassBorder}` : "1px solid rgba(200,140,255,0.18)",
+                    boxShadow: active ? "0 0 14px rgba(78,0,142,0.6)" : "0 1px 4px rgba(0,0,0,0.25)",
+                    transition: "all 0.18s" }}>
+                    {/* Area name */}
+                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6,
+                      color: active ? "#fff" : "rgba(255,255,255,0.75)",
+                      letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                      {label}
+                    </div>
+                    {/* Count */}
+                    <div style={{ display: "flex", alignItems: "baseline", gap: 2, marginBottom: 7 }}>
+                      <span style={{ fontSize: 26, fontWeight: 900, lineHeight: 1, color: col }}>
+                        {onAir}
+                      </span>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.4)" }}>
+                        /{total}
                       </span>
                     </div>
-                    <div style={{ marginTop: 3, height: 3, borderRadius: 2, background: "rgba(255,255,255,0.1)" }}>
-                      <div style={{ height: "100%", borderRadius: 2, background: col,
+                    {/* Progress bar */}
+                    <div style={{ height: 4, borderRadius: 3, background: "rgba(255,255,255,0.1)" }}>
+                      <div style={{ height: "100%", borderRadius: 3, background: col,
                         width: total ? `${pct}%` : "0%", transition: "width 0.5s" }} />
+                    </div>
+                    {/* Pct label */}
+                    <div style={{ marginTop: 4, fontSize: 10, fontWeight: 600,
+                      color: "rgba(255,255,255,0.45)", textAlign: "right" }}>
+                      {total ? `${pct}% on-air` : "—"}
                     </div>
                   </button>
                 );
