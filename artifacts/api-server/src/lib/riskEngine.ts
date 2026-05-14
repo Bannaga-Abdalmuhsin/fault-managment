@@ -92,8 +92,8 @@ async function poll() {
     // 3. Area map for ETA
     const areaMap = new Map<string, string>();
     for (const r of siteAreaRows) {
-      const sid = r["[siteId]"] ?? r["DB[Site ID]"] ?? "";
-      const area = (r["[area]"] ?? r["DB[Column13]"] ?? "").toString();
+      const sid  = (r["[siteId]"] ?? r["DB[Site ID]"] ?? "").toString();
+      const area = (r["[area]"]   ?? r["DB[Column13]"] ?? "").toString();
       if (sid) areaMap.set(sid, area);
     }
 
@@ -118,7 +118,7 @@ async function poll() {
         ? existing.assignedTime
         : assignedMs;
 
-      // Battery from DB
+      // Battery from local DB (batteryUsefulTimeHrs)
       const dbSite = dbMap.get(siteId);
       const batteryBackupMinutes = dbSite?.batteryUsefulTimeHrs != null
         ? Math.round(dbSite.batteryUsefulTimeHrs * 60)
@@ -132,10 +132,9 @@ async function poll() {
           : cfgCode === "DG" ? "Commercial + Diesel Generator"
           : cfgCode || "Unknown");
 
-      // ETA from area
+      // ETA from area: Makkah Remote = 30 min; Arafat / Muzdalifah / Mina / others = 15 min
       const area = areaMap.get(siteId) ?? "";
-      const etaMinutes = area.toLowerCase().includes("makkah") ||
-        area.toLowerCase().includes("haram") ? 30 : 15;
+      const etaMinutes = area.toLowerCase().includes("makkah remote") ? 30 : 15;
 
       // Expiry timestamps
       const batteryExpiry = batteryBackupMinutes != null
