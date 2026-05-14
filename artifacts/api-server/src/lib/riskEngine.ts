@@ -3,7 +3,7 @@ import { dax } from "./pbi";
 import { logger } from "./logger";
 import type { Response } from "express";
 
-// ── Alarm keyword filter ──────────────────────────────────────────────────────
+// ── Alarm type classifier ─────────────────────────────────────────────────────
 const POWER_KEYWORDS = ["power", "high temp", "battery", "rectifier", "generator"];
 function isPowerAlarm(text: string): boolean {
   const lower = (text ?? "").toLowerCase();
@@ -13,6 +13,7 @@ function isPowerAlarm(text: string): boolean {
 // ── RiskCard type ─────────────────────────────────────────────────────────────
 export interface RiskCard {
   siteId: string;
+  alarmType: "power" | "nsa";
   alarmDescription: string;
   assignedTime: number;          // ms since epoch (from PBI Assigned Time)
   powerConfiguration: string;
@@ -96,15 +97,10 @@ async function poll() {
       if (sid) areaMap.set(sid, area);
     }
 
-    // 4. Filter to power alarms only
-    const powerAlarms = ticketRows.filter(r => {
-      const desc = (r["[description]"] ?? r["[issue]"] ?? "").toString();
-      return isPowerAlarm(desc);
-    });
-
+    // 4. All open tickets — classify each as power or nsa
     // 5. Build updated card map
     const incoming = new Set<string>();
-    for (const r of powerAlarms) {
+    for (const r of ticketRows) {
       const siteId = (r["[siteId]"] ?? "").toString();
       if (!siteId) continue;
 
@@ -153,10 +149,12 @@ async function poll() {
       const etaRemain  = etaExpiry - now;
       const severity: RiskCard["severity"] = battRemain < etaRemain ? "critical" : "normal";
 
-      const alarmDescription = (r["[description]"] ?? r["[issue]"] ?? "Power Alarm").toString();
+      const alarmDescription = (r["[description]"] ?? r["[issue]"] ?? "Open Ticket").toString();
+      const alarmType: RiskCard["alarmType"] = isPowerAlarm(alarmDescription) ? "power" : "nsa";
 
       activeRiskCards.set(siteId, {
         siteId,
+        alarmType,
         alarmDescription,
         assignedTime,
         powerConfiguration,

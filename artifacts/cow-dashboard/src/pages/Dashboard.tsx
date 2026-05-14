@@ -138,6 +138,7 @@ interface RiskCard {
   etaMinutes: number;
   batteryExpiry: number | null;  // ms timestamp
   etaExpiry: number | null;      // ms timestamp
+  alarmType: "power" | "nsa";
   severity: "critical" | "normal" | "cleared";
 }
 
@@ -177,14 +178,21 @@ function RiskCardComp({ card }: { card: RiskCard }) {
 
   const isCritical = card.severity === "critical";
   const isCleared  = card.severity === "cleared";
+  const isNsa      = card.alarmType === "nsa";
 
+  // NSA tickets: blue/cyan theme; Power alarms: orange/red theme
   const borderColor = isCleared  ? "rgba(0,200,120,0.45)"
     : isCritical ? P.red
+    : isNsa ? "rgba(56,212,255,0.35)"
     : "rgba(245,158,11,0.35)";
   const bgColor = isCleared  ? "rgba(0,200,120,0.06)"
     : isCritical ? "rgba(239,68,68,0.09)"
+    : isNsa ? "rgba(56,212,255,0.06)"
     : "rgba(245,158,11,0.07)";
-  const accentColor = isCleared ? P.green : isCritical ? P.red : P.orange;
+  const accentColor = isCleared ? P.green
+    : isCritical ? P.red
+    : isNsa ? "#38D4FF"
+    : P.orange;
 
   const battColor = battRemainS == null ? P.orange
     : battRemainS < 600  ? P.red
@@ -205,14 +213,29 @@ function RiskCardComp({ card }: { card: RiskCard }) {
     }}>
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontSize: 18, fontWeight: 800, color: accentColor, letterSpacing: "0.04em" }}>
-          {card.siteId}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: accentColor, letterSpacing: "0.04em" }}>
+            {card.siteId}
+          </span>
+          {/* Alarm type pill */}
+          <span style={{
+            fontSize: 9, fontWeight: 800, letterSpacing: "0.1em",
+            padding: "2px 6px", borderRadius: 6,
+            background: isNsa ? "rgba(56,212,255,0.15)" : "rgba(245,158,11,0.18)",
+            color: isNsa ? "#38D4FF" : P.orange,
+            textTransform: "uppercase",
+            border: `1px solid ${isNsa ? "rgba(56,212,255,0.3)" : "rgba(245,158,11,0.3)"}`,
+          }}>
+            {isNsa ? "NSA" : "⚡ POWER"}
+          </span>
+        </div>
         <span style={{
           fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
           padding: "3px 9px", borderRadius: 10,
           background: isCleared ? "rgba(0,200,120,0.18)"
-            : isCritical ? "rgba(239,68,68,0.25)" : "rgba(245,158,11,0.2)",
+            : isCritical ? "rgba(239,68,68,0.25)"
+            : isNsa ? "rgba(56,212,255,0.15)"
+            : "rgba(245,158,11,0.2)",
           color: accentColor, textTransform: "uppercase",
         }}>
           {isCleared ? "CLEARED" : isCritical ? "CRITICAL" : "NORMAL"}
@@ -227,8 +250,8 @@ function RiskCardComp({ card }: { card: RiskCard }) {
         <Row label="ETA"      value={`${card.etaMinutes} min`} color="#38D4FF" />
       </div>
 
-      {/* Timer boxes */}
-      <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}`, paddingTop: 8,
+      {/* Timer boxes — power alarms only */}
+      {!isNsa && <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}`, paddingTop: 8,
         display: "flex", flexDirection: "column", gap: 6 }}>
         {/* Battery backup countdown */}
         <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "8px 10px" }}>
@@ -261,7 +284,7 @@ function RiskCardComp({ card }: { card: RiskCard }) {
             </div>
           </div>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
