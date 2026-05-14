@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Map3D from "@/components/Map3D";
 import GaugeSvg from "@/components/Gauge";
 
@@ -128,85 +128,138 @@ function fmtSec(totalSec: number): string {
   return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
 }
 
-// ─── Live at-risk site card with count-up + countdown timers ──────────────────
-type AtRiskEntry = {
-  id: string; siteName: string; title: string; description?: string; createdAt: string; assignedAt?: string;
-  powerSource?: string; remainingSAL?: number | null; durationMin?: number | null;
-  site?: { area?: string | null; powerConfig?: string; batteryUsefulTimeHrs?: number | null };
-};
-function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) {
-  // Running Duration: count-up from PBI Assigned Time — useMemo so it recalculates when data refreshes
-  // Falls back to createdAt if assignedAt is absent
-  const assignedMs = useMemo(
-    () => Date.parse(r.assignedAt ?? "") || Date.parse(r.createdAt) || Date.now(),
-    [r.assignedAt, r.createdAt],
-  );
-  // Battery countdown starts from page load so it never shows depleted
-  const mountMs     = useRef(Date.now());
+// ─── SSE-driven risk card types ───────────────────────────────────────────────
+interface RiskCard {
+  siteId: string;
+  alarmDescription: string;
+  assignedTime: number;          // ms since epoch
+  powerConfiguration: string;
+  batteryBackupMinutes: number | null;
+  etaMinutes: number;
+  batteryExpiry: number | null;  // ms timestamp
+  etaExpiry: number | null;      // ms timestamp
+  severity: "critical" | "normal" | "cleared";
+}
+
+// ─── SSE hook ──────────────────────────────────────────────────────────────────
+function useRiskCards(): RiskCard[] {
+  const [cards, setCards] = useState<RiskCard[]>([]);
+  useEffect(() => {
+    let es: EventSource;
+    function connect() {
+      es = new EventSource(`${BASE}/api/risk/stream`);
+      es.onmessage = (e) => {
+        try { setCards(JSON.parse(e.data) as RiskCard[]); } catch { /* ignore */ }
+      };
+      es.onerror = () => {
+        es.close();
+        setTimeout(connect, 5_000); // reconnect on error
+      };
+    }
+    connect();
+    return () => es?.close();
+  }, []);
+  return cards;
+}
+
+// ─── Live risk card component ─────────────────────────────────────────────────
+function RiskCardComp({ card }: { card: RiskCard }) {
   const [, setTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const battHrs = r.site?.batteryUsefulTimeHrs ?? null;
-  const totalS  = battHrs != null ? Math.round(battHrs * 3600) : null;
+  const now           = Date.now();
+  const runningS      = Math.max(0, Math.floor((now - card.assignedTime) / 1000));
+  const battRemainS   = card.batteryExpiry != null ? Math.max(0, Math.floor((card.batteryExpiry - now) / 1000)) : null;
+  const etaRemainS    = card.etaExpiry != null     ? Math.max(0, Math.floor((card.etaExpiry    - now) / 1000)) : null;
 
-  // Count-UP: live elapsed time since ticket was assigned (PBI Assigned Time)
-  const elapsedS = Math.floor((Date.now() - assignedMs.current) / 1000);
+  const isCritical = card.severity === "critical";
+  const isCleared  = card.severity === "cleared";
 
-  // Count-DOWN: full battery capacity minus time elapsed since page load
-  const mountedElapsedS = Math.floor((Date.now() - mountMs.current) / 1000);
-  const remainS = totalS != null ? Math.max(0, totalS - mountedElapsedS) : null;
+  const borderColor = isCleared  ? "rgba(0,200,120,0.45)"
+    : isCritical ? P.red
+    : "rgba(245,158,11,0.35)";
+  const bgColor = isCleared  ? "rgba(0,200,120,0.06)"
+    : isCritical ? "rgba(239,68,68,0.09)"
+    : "rgba(245,158,11,0.07)";
+  const accentColor = isCleared ? P.green : isCritical ? P.red : P.orange;
 
-  const battColor = remainS == null ? pal.orange
-    : remainS < 600   ? pal.red      // < 10 min
-    : remainS < 3600  ? pal.orange   // < 1 hr
+  const battColor = battRemainS == null ? P.orange
+    : battRemainS < 600  ? P.red
+    : battRemainS < 3600 ? P.orange
     : "#38D4FF";
 
-  const dbPower   = r.site?.powerConfig;
-  const cfgCode   = (r.powerSource ?? "").toString().toUpperCase();
-  const powerDesc = dbPower
-    ?? (cfgCode === "SG" ? "Commercial + Standby Generator"
-      : cfgCode === "SB" ? "Commercial + Standby Battery"
-      : cfgCode === "DG" ? "Commercial + Diesel Generator"
-      : cfgCode || "—");
-
-  const area = r.site?.area ?? "";
-  const eta  = area === "Makkah Remote" ? "30 min" : "15 min";
+  const assignedLocal = new Date(card.assignedTime).toLocaleTimeString("en-GB",
+    { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
   return (
-    <div style={{ background:"rgba(245,158,11,0.07)", border:"1px solid rgba(245,158,11,0.30)",
-      borderRadius:8, padding:"10px 12px" }}>
-      <div style={{ fontSize:15, fontWeight:800, color:pal.orange, marginBottom:8, letterSpacing:"0.04em" }}>
-        {r.siteName}
+    <div style={{
+      background: bgColor,
+      border: `1px solid ${borderColor}`,
+      borderRadius: 8, padding: "10px 12px",
+      animation: isCritical ? "criticalPulse 1.8s ease-in-out infinite" : "none",
+      transition: "border-color 0.4s, background 0.4s",
+      opacity: isCleared ? 0.6 : 1,
+    }}>
+      {/* Header row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <span style={{ fontSize: 15, fontWeight: 800, color: accentColor, letterSpacing: "0.04em" }}>
+          {card.siteId}
+        </span>
+        <span style={{
+          fontSize: 9, fontWeight: 800, letterSpacing: "0.08em",
+          padding: "2px 7px", borderRadius: 10,
+          background: isCleared ? "rgba(0,200,120,0.18)"
+            : isCritical ? "rgba(239,68,68,0.25)" : "rgba(245,158,11,0.2)",
+          color: accentColor, textTransform: "uppercase",
+        }}>
+          {isCleared ? "CLEARED" : isCritical ? "CRITICAL" : "NORMAL"}
+        </span>
       </div>
-      <div style={{ fontSize:13, lineHeight:2.0 }}>
-        <Row label="Alarm"      value={r.description || r.title || "—"} />
-        <Row label="Power"      value={powerDesc} />
-        <Row label="ETA to Site" value={`${eta}${area ? ` (${area})` : ""}`} color="#38D4FF" />
+
+      {/* Info rows */}
+      <div style={{ fontSize: 12, lineHeight: 1.9 }}>
+        <Row label="Alarm"   value={card.alarmDescription || "—"} />
+        <Row label="Assigned" value={assignedLocal} />
+        <Row label="Power"   value={card.powerConfiguration || "—"} />
+        <Row label="ETA"     value={`${card.etaMinutes} min`} color="#38D4FF" />
       </div>
-      <div style={{ marginTop:8, borderTop:"1px solid rgba(245,158,11,0.18)", paddingTop:8,
-        display:"flex", gap:10 }}>
-        {/* Count-UP: time since ticket opened */}
-        <div style={{ flex:1, background:"rgba(0,0,0,0.18)", borderRadius:7, padding:"7px 10px" }}>
-          <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
-            color:"rgba(255,255,255,0.38)", marginBottom:4 }}>⏱ Running Duration</div>
-          <div style={{ fontSize:21, fontWeight:900, fontFamily:"monospace",
-            letterSpacing:"0.06em", color:pal.orange }}>
-            {fmtSec(elapsedS)}
+
+      {/* Timer boxes */}
+      <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}`, paddingTop: 8,
+        display: "flex", gap: 6 }}>
+        {/* Running duration */}
+        <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "6px 8px" }}>
+          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+            color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>⏱ Running</div>
+          <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "monospace", color: accentColor }}>
+            {fmtSec(runningS)}
           </div>
         </div>
-        {/* Count-DOWN: battery backup remaining from capacity */}
-        {remainS !== null && (
-          <div style={{ flex:1, background:"rgba(0,0,0,0.18)", borderRadius:7, padding:"7px 10px" }}>
-            <div style={{ fontSize:9, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase",
-              color:"rgba(255,255,255,0.38)", marginBottom:4 }}>
-              🔋 Battery ({fmtHrs(battHrs!)})
+
+        {/* Battery remaining */}
+        {battRemainS !== null && (
+          <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "6px 8px" }}>
+            <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+              color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>
+              🔋 Battery
             </div>
-            <div style={{ fontSize:21, fontWeight:900, fontFamily:"monospace",
-              letterSpacing:"0.06em", color:battColor }}>
-              {fmtSec(remainS)}
+            <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "monospace", color: battColor }}>
+              {fmtSec(battRemainS)}
+            </div>
+          </div>
+        )}
+
+        {/* ETA remaining */}
+        {etaRemainS !== null && (
+          <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "6px 8px" }}>
+            <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+              color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>🚗 ETA</div>
+            <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "monospace",
+              color: etaRemainS <= 0 ? P.red : "#38D4FF" }}>
+              {fmtSec(etaRemainS)}
             </div>
           </div>
         )}
@@ -493,23 +546,8 @@ export default function Dashboard() {
       }));
   }, [areaSites, cowIdFilter, powerTix, telecomTix]);
 
-  // ── At-risk sites: operational but with open ticket → pre-outage warning ──
-  const atRiskSites = useMemo(() => {
-    const sites = pbiSites ?? [];
-    const allOpenTix = [
-      ...(powerTix  ?? []).filter(t => t.status !== "closed"),
-      ...(telecomTix ?? []).filter(t => t.status !== "closed"),
-    ];
-    return allOpenTix
-      .filter(t => {
-        const site = sites.find(s => s.name === t.siteName);
-        return site?.status !== "offline"; // only yellow (still operational) sites
-      })
-      .map(t => ({
-        ...t,
-        site: sites.find(s => s.name === t.siteName),
-      }));
-  }, [pbiSites, powerTix, telecomTix]);
+  // ── Real-time risk cards via SSE ──────────────────────────────────────────
+  const riskCards = useRiskCards();
 
   // ── Ticket filtering (area + status) ──────────────────────────────────────
   const areaNames = useMemo(() => new Set(areaSites.map(s => s.name)), [areaSites]);
@@ -751,22 +789,39 @@ export default function Dashboard() {
             </Glass>
           ))}
 
-          {/* ── At-Risk Sites: pre-outage warning ─────────────────────── */}
-          {atRiskSites.length > 0 && (
-            <Glass style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em", color: P.orange }}>
-                  ⚠ AT-RISK SITES
+          {/* ── AT-RISK SITES: SSE-driven real-time risk engine ────────── */}
+          <Glass style={{ padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%",
+                  background: riskCards.length > 0 ? P.orange : P.green,
+                  boxShadow: `0 0 7px ${riskCards.length > 0 ? P.orange : P.green}`,
+                  display: "inline-block",
+                  animation: riskCards.some(c => c.severity === "critical") ? "pulse 1.2s infinite" : "none" }} />
+                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+                  color: riskCards.length > 0 ? P.orange : "rgba(255,255,255,0.55)" }}>
+                  AT-RISK SITES
                 </span>
-                <span style={{ fontSize: 10, color: "rgba(255,255,255,0.35)" }}>({atRiskSites.length})</span>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 380, overflowY: "auto" }}>
-                {atRiskSites.map(r => (
-                  <AtRiskCard key={r.id} r={r} pal={P} />
+              <span style={{ fontSize: 10, fontWeight: 700,
+                background: riskCards.length > 0 ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.08)",
+                borderRadius: 10, padding: "1px 8px",
+                color: riskCards.length > 0 ? P.orange : "rgba(255,255,255,0.35)" }}>
+                {riskCards.length} active
+              </span>
+            </div>
+            {riskCards.length === 0 ? (
+              <div style={{ fontSize: 12, color: P.green, fontWeight: 600, textAlign: "center",
+                padding: "8px 0" }}>✓ No active power alarms</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8,
+                maxHeight: 420, overflowY: "auto" }}>
+                {riskCards.map(c => (
+                  <RiskCardComp key={c.siteId} card={c} />
                 ))}
               </div>
-            </Glass>
-          )}
+            )}
+          </Glass>
         </div>
 
         {/* ── Map legend (bottom-left, above Leaflet attribution) ────────── */}
@@ -810,6 +865,10 @@ export default function Dashboard() {
         @keyframes tickerScroll {
           0%   { transform: translateX(0); }
           100% { transform: translateX(-50%); }
+        }
+        @keyframes criticalPulse {
+          0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0); }
+          50%      { box-shadow: 0 0 12px 3px rgba(239,68,68,0.45); }
         }
         select option { background: #14002A; }
         ::-webkit-scrollbar { width: 4px; }

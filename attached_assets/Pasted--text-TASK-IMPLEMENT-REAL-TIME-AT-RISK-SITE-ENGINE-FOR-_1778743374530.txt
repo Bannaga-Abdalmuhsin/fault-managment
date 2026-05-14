@@ -1,0 +1,311 @@
+```text
+TASK: IMPLEMENT REAL-TIME “AT-RISK SITE” ENGINE FOR COW HAJJ DASHBOARD
+
+PROJECT CONTEXT
+----------------
+We already have:
+
+1. Main dashboard in Replit
+2. Power BI real-time API integration functioning properly
+3. Separate “COW Risk” dashboard/database already connected
+4. Existing “Running NSA Tickets” table from Power BI feed
+5. Existing map/dashboard UI
+6. Existing “AT-RISK SITES” panel on right side
+
+OBJECTIVE
+----------
+Create a fully automated real-time “At-Risk Site” engine.
+
+WHEN:
+A power-related alarm appears in “Running NSA Tickets”
+
+THEN:
+Automatically create a dynamic risk card for that site.
+
+WHEN:
+Alarm clears/disappears from “Running NSA Tickets”
+
+THEN:
+Automatically remove the risk card immediately.
+
+--------------------------------------------------
+DATA SOURCES
+--------------------------------------------------
+
+FROM POWER BI:
+----------------
+Use data from “Running NSA Tickets”:
+
+1. SITE ID
+2. PROBLEM DESCRIPTION
+3. ASSIGNED TIME
+
+FROM COW RISK DATABASE:
+------------------------
+Using site_id lookup, retrieve:
+
+1. power_configuration
+2. battery_backup_minutes
+3. eta_minutes
+4. district (if available)
+
+--------------------------------------------------
+POWER ALARM FILTER
+--------------------------------------------------
+
+Only generate cards for alarms containing:
+
+- power
+- high temp
+- battery
+- rectifier
+- generator
+
+Case-insensitive matching required.
+
+--------------------------------------------------
+BACKEND REQUIREMENTS
+--------------------------------------------------
+
+Create backend risk engine.
+
+Use:
+- Node.js
+- Express
+- Existing backend structure
+
+Create:
+- activeRiskCards memory store
+
+Example:
+
+const activeRiskCards = new Map();
+
+KEY:
+- site_id
+
+VALUE:
+- full risk card object
+
+--------------------------------------------------
+RISK CARD OBJECT
+--------------------------------------------------
+
+Structure:
+
+{
+  siteId,
+  alarmDescription,
+  assignedTime,
+  powerConfiguration,
+  batteryBackupMinutes,
+  etaMinutes,
+  batteryExpiry,
+  etaExpiry,
+  severity
+}
+
+--------------------------------------------------
+TIME CALCULATIONS
+--------------------------------------------------
+
+IMPORTANT:
+Use ASSIGNED TIME as source of truth.
+
+DO NOT use page load time.
+
+batteryExpiry =
+assigned_time + battery_backup_minutes
+
+etaExpiry =
+assigned_time + eta_minutes
+
+Store timestamps in milliseconds.
+
+--------------------------------------------------
+SEVERITY ENGINE
+--------------------------------------------------
+
+Severity Logic:
+
+IF:
+battery remaining < ETA remaining
+
+THEN:
+severity = "critical"
+
+ELSE:
+severity = "normal"
+
+--------------------------------------------------
+REAL-TIME POLLING ENGINE
+--------------------------------------------------
+
+Every refresh cycle:
+
+1. Fetch latest Running NSA Tickets
+2. Filter power alarms
+3. Create/update risk cards
+4. Remove cleared alarms
+
+REMOVAL CONDITION:
+If site no longer exists in active power alarms,
+remove the card immediately.
+
+--------------------------------------------------
+SOCKET.IO / REAL-TIME PUSH
+--------------------------------------------------
+
+Use websocket updates.
+
+Backend emits:
+
+socket.emit(
+  "riskCards",
+  [...activeRiskCards.values()]
+);
+
+Frontend must render directly from websocket data.
+
+--------------------------------------------------
+FRONTEND REQUIREMENTS
+--------------------------------------------------
+
+In existing “AT-RISK SITES” panel:
+
+Render dynamic cards.
+
+Each card must display:
+
+1. SITE ID
+2. Alarm Description
+3. Assigned Time
+4. Power Configuration
+5. Battery Remaining Countdown
+6. ETA Remaining Countdown
+7. Severity
+
+--------------------------------------------------
+COUNTDOWN TIMERS
+--------------------------------------------------
+
+Implement live timers updating every second.
+
+Battery Remaining:
+batteryExpiry - current time
+
+ETA Remaining:
+etaExpiry - current time
+
+FORMAT:
+HH:MM:SS
+
+When timer <= 0:
+Display:
+00:00:00
+
+--------------------------------------------------
+CARD COLORS
+--------------------------------------------------
+
+NORMAL:
+- green border/accent
+
+CRITICAL:
+- red border
+- pulse animation
+
+--------------------------------------------------
+FRONTEND TIMER RULE
+--------------------------------------------------
+
+Frontend MUST NOT calculate expiry timestamps.
+
+Backend calculates timestamps.
+
+Frontend ONLY renders remaining time.
+
+--------------------------------------------------
+CARD AUTO-REMOVAL
+--------------------------------------------------
+
+When alarm clears:
+- remove card automatically
+- no stale cards
+- no manual refresh required
+
+--------------------------------------------------
+OPTIONAL ENHANCEMENT
+--------------------------------------------------
+
+Before removal:
+Show “CLEARED” state for 5 seconds,
+then remove card.
+
+--------------------------------------------------
+IMPORTANT ARCHITECTURE RULES
+--------------------------------------------------
+
+1. Backend is single source of truth
+2. Frontend only renders websocket state
+3. Do not create duplicate cards
+4. Prevent timer reset on page refresh
+5. Preserve operational NOC behavior
+6. Use assigned_time for all SLA calculations
+
+--------------------------------------------------
+EXPECTED FINAL BEHAVIOR
+--------------------------------------------------
+
+ALARM APPEARS:
+→ Card created automatically
+
+ALARM ACTIVE:
+→ Live ETA countdown
+→ Live battery countdown
+
+ALARM CLEARS:
+→ Card disappears automatically
+
+--------------------------------------------------
+EXPECTED FINAL CARD EXAMPLE
+--------------------------------------------------
+
+CWN213
+HIGH TEMP
+
+Assigned:
+10:13:44
+
+Power Config:
+2x Rectifier + DG
+
+Battery Remaining:
+02:13:44
+
+ETA Remaining:
+00:12:10
+
+Severity:
+CRITICAL
+
+--------------------------------------------------
+DELIVERABLES
+--------------------------------------------------
+
+Implement:
+
+1. Backend polling engine
+2. Alarm filter logic
+3. Risk DB lookup
+4. Countdown timestamp calculations
+5. Active risk card memory store
+6. Websocket push updates
+7. Frontend risk card rendering
+8. Live timers
+9. Auto-remove cleared alarms
+10. Severity color logic
+
+Do NOT modify existing Power BI functionality.
+Integrate cleanly into current dashboard architecture.
+```
