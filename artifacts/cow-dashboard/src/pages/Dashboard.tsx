@@ -835,7 +835,8 @@ export default function Dashboard() {
               <div style={{ fontSize: 12, color: P.green, fontWeight: 600, textAlign: "center",
                 padding: "8px 0" }}>✓ No active power alarms</div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8,
+                maxHeight: "calc(100vh - 320px)", overflowY: "auto" }}>
                 {riskCards.map(c => (
                   <RiskCardComp key={c.siteId} card={c} />
                 ))}
