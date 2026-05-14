@@ -230,27 +230,25 @@ function RiskCardComp({ card }: { card: RiskCard }) {
       {/* Timer boxes */}
       <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}`, paddingTop: 8,
         display: "flex", gap: 6 }}>
-        {/* Running duration */}
+        {/* Battery backup countdown */}
         <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "6px 8px" }}>
           <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-            color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>⏱ Running</div>
-          <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "monospace", color: accentColor }}>
-            {fmtSec(runningS)}
+            color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>
+            🔋 Battery Backup
+            {card.batteryBackupMinutes != null && (
+              <span style={{ marginLeft: 4, opacity: 0.6 }}>({fmtHrs(card.batteryBackupMinutes / 60)})</span>
+            )}
           </div>
-        </div>
-
-        {/* Battery remaining */}
-        {battRemainS !== null && (
-          <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "6px 8px" }}>
-            <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-              color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>
-              🔋 Battery
-            </div>
+          {battRemainS !== null ? (
             <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "monospace", color: battColor }}>
               {fmtSec(battRemainS)}
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.3)", paddingTop: 2 }}>
+              No data
+            </div>
+          )}
+        </div>
 
         {/* ETA remaining */}
         {etaRemainS !== null && (
