@@ -4,7 +4,7 @@ import { logger } from "./logger";
 import type { Response } from "express";
 
 // ── Alarm type classifier ─────────────────────────────────────────────────────
-const POWER_KEYWORDS = ["power", "high temp", "battery", "rectifier", "generator"];
+const POWER_KEYWORDS = ["power", "high temp", "battery", "rectifier", "generator", "mains", "outage", "fuel", "ups"];
 function isPowerAlarm(text: string): boolean {
   const lower = (text ?? "").toLowerCase();
   return POWER_KEYWORDS.some(kw => lower.includes(kw));

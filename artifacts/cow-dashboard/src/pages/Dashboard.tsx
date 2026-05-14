@@ -250,8 +250,8 @@ function RiskCardComp({ card }: { card: RiskCard }) {
         <Row label="ETA"      value={`${card.etaMinutes} min`} color="#38D4FF" />
       </div>
 
-      {/* Timer boxes — power alarms only */}
-      {!isNsa && <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}`, paddingTop: 8,
+      {/* Timer boxes */}
+      <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}`, paddingTop: 8,
         display: "flex", flexDirection: "column", gap: 6 }}>
         {/* Battery backup countdown */}
         <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "8px 10px" }}>
@@ -284,7 +284,7 @@ function RiskCardComp({ card }: { card: RiskCard }) {
             </div>
           </div>
         )}
-      </div>}
+      </div>
     </div>
   );
 }
