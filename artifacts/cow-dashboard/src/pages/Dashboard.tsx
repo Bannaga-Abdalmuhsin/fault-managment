@@ -790,14 +790,14 @@ export default function Dashboard() {
 
         {/* ── RIGHT: gauge panel (top) ────────────────────────────────────── */}
         <Glass style={{ position: "absolute", top: 36, right: 10, zIndex: 900,
-          width: 228, padding: "6px 10px 6px",
+          width: 300, padding: "6px 10px 6px",
           display: "flex", flexDirection: "column", alignItems: "center" }}>
           <GaugeSvg value={areaAvail} size={178} />
         </Glass>
 
         {/* ── RIGHT: KPI cards (below gauge, one card each) ───────────────── */}
         <div style={{ position: "absolute", top: 198, right: 10, zIndex: 900,
-          width: 228, display: "flex", flexDirection: "column", gap: 6 }}>
+          width: 300, display: "flex", flexDirection: "column", gap: 6 }}>
           {[
             { label: "Total Sites",            value: totalSites,            accent: "#fff"   },
             { label: "Power Tickets (Open)",   value: filteredPower.length,  accent: P.orange },
@@ -835,8 +835,7 @@ export default function Dashboard() {
               <div style={{ fontSize: 12, color: P.green, fontWeight: 600, textAlign: "center",
                 padding: "8px 0" }}>✓ No active power alarms</div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 8,
-                maxHeight: 420, overflowY: "auto" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {riskCards.map(c => (
                   <RiskCardComp key={c.siteId} card={c} />
                 ))}
