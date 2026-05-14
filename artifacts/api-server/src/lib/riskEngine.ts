@@ -1,4 +1,3 @@
-import { db, sitesTable } from "@workspace/db";
 import { dax } from "./pbi";
 import { logger } from "./logger";
 import type { Response } from "express";
@@ -10,19 +9,29 @@ function isPowerAlarm(text: string): boolean {
   return POWER_KEYWORDS.some(kw => lower.includes(kw));
 }
 
+// ── Power source code → label ─────────────────────────────────────────────────
+function powerLabel(code: string): string {
+  const c = (code ?? "").toString().toUpperCase().trim();
+  if (c === "SG") return "Commercial + Standby Generator";
+  if (c === "SB") return "Commercial + Standby Battery";
+  if (c === "CB") return "Commercial + Standby Battery";
+  if (c === "DG") return "Commercial + Diesel Generator";
+  return c || "Unknown";
+}
+
 // ── RiskCard type ─────────────────────────────────────────────────────────────
 export interface RiskCard {
   siteId: string;
   alarmType: "power" | "nsa";
   alarmDescription: string;
-  assignedTime: number;          // ms since epoch (from PBI Assigned Time)
+  assignedTime: number;
   powerConfiguration: string;
   batteryBackupMinutes: number | null;
   etaMinutes: number;
-  batteryExpiry: number | null;  // ms — assignedTime + batteryBackupMinutes
-  etaExpiry: number | null;      // ms — assignedTime + etaMinutes
+  batteryExpiry: number | null;
+  etaExpiry: number | null;
   severity: "critical" | "normal" | "cleared";
-  clearedAt?: number;            // ms — when cleared (for auto-removal)
+  clearedAt?: number;
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -32,7 +41,6 @@ const sseClients = new Set<Response>();
 // ── SSE helpers ───────────────────────────────────────────────────────────────
 export function addSseClient(res: Response) {
   sseClients.add(res);
-  // Send current state immediately on connect
   const payload = JSON.stringify([...activeRiskCards.values()]);
   res.write(`data: ${payload}\n\n`);
 }
@@ -49,11 +57,35 @@ function broadcast() {
   }
 }
 
+// ── Fetch battery backup from PBI (separate query — column name may vary) ─────
+async function fetchBatteryMap(): Promise<Map<string, number | null>> {
+  const map = new Map<string, number | null>();
+  // Try the user-supplied column name; swallow error if PBI rejects it
+  try {
+    const rows = await dax(`
+      EVALUATE
+      SELECTCOLUMNS(
+        FILTER(DB, DB[Region] = "WR-HAJJ"),
+        "siteId",   DB[Site ID],
+        "battHrs",  DB[Batteries Strings MAX useful Time Hours]
+      )
+    `);
+    for (const r of rows) {
+      const sid = (r["[siteId]"] ?? "").toString().trim();
+      const bh  = r["[battHrs]"];
+      if (sid) map.set(sid, bh != null && bh !== "" && !isNaN(Number(bh)) ? Number(bh) : null);
+    }
+  } catch (err: any) {
+    logger.warn({ msg: err?.message?.slice(0, 120) }, "Battery column not found in PBI DB — battery will show 'No data'");
+  }
+  return map;
+}
+
 // ── Poll engine ───────────────────────────────────────────────────────────────
 async function poll() {
   try {
-    // 1. Fetch open power tickets for WR-HAJJ
-    const [ticketRows, siteAreaRows] = await Promise.all([
+    // Fetch tickets, site reference data, and battery map from PBI in parallel
+    const [ticketRows, siteRows, batteryMap] = await Promise.all([
       dax(`
         EVALUATE
         VAR _hajjSites = SELECTCOLUMNS(FILTER(DB, DB[Region] = "WR-HAJJ"), "sid", DB[Site ID])
@@ -67,44 +99,39 @@ async function poll() {
           "startDate",    'Input Record'[Start Date],
           "assignedTime", 'Input Record'[Assigned Time],
           "issue",        'Input Record'[Issue],
-          "description",  'Input Record'[Problem Description],
-          "powerSource",  'Input Record'[Power Source]
+          "description",  'Input Record'[Problem Description]
         )
       `),
       dax(`
         EVALUATE
         SELECTCOLUMNS(
           FILTER(DB, DB[Region] = "WR-HAJJ"),
-          "siteId", DB[Site ID],
-          "area",   DB[Column13]
+          "siteId",   DB[Site ID],
+          "area",     DB[Column13],
+          "pwrCfg",   DB[Power Configration]
         )
       `),
+      fetchBatteryMap(),
     ]);
 
-    // 2. DB power config lookup
-    const dbSites = await db.select({
-      name: sitesTable.name,
-      powerConfig: sitesTable.powerConfig,
-      batteryUsefulTimeHrs: sitesTable.batteryUsefulTimeHrs,
-    }).from(sitesTable);
-    const dbMap = new Map(dbSites.map(s => [s.name, s]));
-
-    // 3. Area map for ETA
-    const areaMap = new Map<string, string>();
-    for (const r of siteAreaRows) {
-      const sid  = (r["[siteId]"] ?? r["DB[Site ID]"] ?? "").toString();
-      const area = (r["[area]"]   ?? r["DB[Column13]"] ?? "").toString();
-      if (sid) areaMap.set(sid, area);
+    // Build site lookup map from PBI DB rows
+    const siteMap = new Map<string, { area: string; powerConfiguration: string }>();
+    for (const r of siteRows) {
+      const sid = (r["[siteId]"] ?? "").toString().trim();
+      if (!sid) continue;
+      siteMap.set(sid, {
+        area: (r["[area]"] ?? "").toString().trim(),
+        powerConfiguration: powerLabel((r["[pwrCfg]"] ?? "").toString()),
+      });
     }
 
-    // 4. All open tickets — classify each as power or nsa
-    // 5. Build updated card map
+    // Build updated card map
     const incoming = new Set<string>();
     for (const r of ticketRows) {
-      const siteId = (r["[siteId]"] ?? "").toString();
+      const siteId = (r["[siteId]"] ?? "").toString().trim();
       if (!siteId) continue;
 
-      // Parse assignedAt — combine Start Date + Assigned Time (Excel epoch time-only)
+      // Parse assigned time — combine Start Date + Assigned Time (Excel epoch time-only)
       const datePart = (r["[startDate]"] ?? "").toString().split("T")[0];
       const timePart = (r["[assignedTime]"] ?? "").toString().split("T")[1] ?? "";
       const assignedIso = datePart && timePart
@@ -112,70 +139,43 @@ async function poll() {
         : (r["[startDate]"] ?? "").toString();
       const assignedMs = Date.parse(assignedIso) || Date.now();
 
-      // Preserve original assignedTime if card already active (prevents timer reset)
+      // Preserve original assignedTime (prevents timer reset on re-poll)
       const existing = activeRiskCards.get(siteId);
       const assignedTime = (existing && existing.severity !== "cleared")
-        ? existing.assignedTime
-        : assignedMs;
+        ? existing.assignedTime : assignedMs;
 
-      // Battery from local DB (batteryUsefulTimeHrs)
-      const dbSite = dbMap.get(siteId);
-      const batteryBackupMinutes = dbSite?.batteryUsefulTimeHrs != null
-        ? Math.round(dbSite.batteryUsefulTimeHrs * 60)
-        : null;
+      const site = siteMap.get(siteId) ?? { area: "", powerConfiguration: "Unknown" };
+      const battHrs = batteryMap.get(siteId) ?? null;
+      const batteryBackupMinutes = battHrs != null ? Math.round(battHrs * 60) : null;
 
-      // Power config label
-      const cfgCode = (r["[powerSource]"] ?? "").toString().toUpperCase();
-      const powerConfiguration = dbSite?.powerConfig
-        ?? (cfgCode === "SG" ? "Commercial + Standby Generator"
-          : cfgCode === "SB" ? "Commercial + Standby Battery"
-          : cfgCode === "DG" ? "Commercial + Diesel Generator"
-          : cfgCode || "Unknown");
+      // ETA: Makkah Remote = 30 min, all others = 15 min
+      const etaMinutes = site.area.toLowerCase().includes("makkah remote") ? 30 : 15;
 
-      // ETA from area: Makkah Remote = 30 min; Arafat / Muzdalifah / Mina / others = 15 min
-      const area = areaMap.get(siteId) ?? "";
-      const etaMinutes = area.toLowerCase().includes("makkah remote") ? 30 : 15;
-
-      // Expiry timestamps
       const batteryExpiry = batteryBackupMinutes != null
-        ? assignedTime + batteryBackupMinutes * 60_000
-        : null;
+        ? assignedTime + batteryBackupMinutes * 60_000 : null;
       const etaExpiry = assignedTime + etaMinutes * 60_000;
 
-      // Severity: critical if battery depletes before ETA
       const now = Date.now();
       const battRemain = batteryExpiry != null ? batteryExpiry - now : Infinity;
-      const etaRemain  = etaExpiry - now;
-      const severity: RiskCard["severity"] = battRemain < etaRemain ? "critical" : "normal";
+      const severity: RiskCard["severity"] = battRemain < (etaExpiry - now) ? "critical" : "normal";
 
       const alarmDescription = (r["[description]"] ?? r["[issue]"] ?? "Open Ticket").toString();
       const alarmType: RiskCard["alarmType"] = isPowerAlarm(alarmDescription) ? "power" : "nsa";
 
       activeRiskCards.set(siteId, {
-        siteId,
-        alarmType,
-        alarmDescription,
-        assignedTime,
-        powerConfiguration,
-        batteryBackupMinutes,
-        etaMinutes,
-        batteryExpiry,
-        etaExpiry,
-        severity,
+        siteId, alarmType, alarmDescription, assignedTime,
+        powerConfiguration: site.powerConfiguration,
+        batteryBackupMinutes, etaMinutes, batteryExpiry, etaExpiry, severity,
       });
       incoming.add(siteId);
     }
 
-    // 6. Mark cleared — cards no longer in incoming set
+    // Mark cleared cards
     const now = Date.now();
     for (const [siteId, card] of activeRiskCards) {
       if (!incoming.has(siteId) && card.severity !== "cleared") {
         activeRiskCards.set(siteId, { ...card, severity: "cleared", clearedAt: now });
-        // Auto-remove after 5 s
-        setTimeout(() => {
-          activeRiskCards.delete(siteId);
-          broadcast();
-        }, 5_000);
+        setTimeout(() => { activeRiskCards.delete(siteId); broadcast(); }, 5_000);
       }
     }
 
@@ -191,7 +191,7 @@ export function getActiveCards(): RiskCard[] {
 }
 
 export function startRiskEngine() {
-  poll();                                   // immediate first run
-  setInterval(poll, 60_000);               // then every 60 s
+  poll();
+  setInterval(poll, 60_000);
   logger.info("Risk engine started");
 }
