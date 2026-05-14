@@ -205,12 +205,12 @@ function RiskCardComp({ card }: { card: RiskCard }) {
     }}>
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-        <span style={{ fontSize: 15, fontWeight: 800, color: accentColor, letterSpacing: "0.04em" }}>
+        <span style={{ fontSize: 18, fontWeight: 800, color: accentColor, letterSpacing: "0.04em" }}>
           {card.siteId}
         </span>
         <span style={{
-          fontSize: 9, fontWeight: 800, letterSpacing: "0.08em",
-          padding: "2px 7px", borderRadius: 10,
+          fontSize: 11, fontWeight: 800, letterSpacing: "0.08em",
+          padding: "3px 9px", borderRadius: 10,
           background: isCleared ? "rgba(0,200,120,0.18)"
             : isCritical ? "rgba(239,68,68,0.25)" : "rgba(245,158,11,0.2)",
           color: accentColor, textTransform: "uppercase",
@@ -220,31 +220,31 @@ function RiskCardComp({ card }: { card: RiskCard }) {
       </div>
 
       {/* Info rows */}
-      <div style={{ fontSize: 12, lineHeight: 1.9 }}>
-        <Row label="Alarm"   value={card.alarmDescription || "—"} />
+      <div style={{ fontSize: 14, lineHeight: 2.0 }}>
+        <Row label="Alarm"    value={card.alarmDescription || "—"} />
         <Row label="Assigned" value={assignedLocal} />
-        <Row label="Power"   value={card.powerConfiguration || "—"} />
-        <Row label="ETA"     value={`${card.etaMinutes} min`} color="#38D4FF" />
+        <Row label="Power"    value={card.powerConfiguration || "—"} />
+        <Row label="ETA"      value={`${card.etaMinutes} min`} color="#38D4FF" />
       </div>
 
       {/* Timer boxes */}
       <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}`, paddingTop: 8,
         display: "flex", flexDirection: "column", gap: 6 }}>
         {/* Battery backup countdown */}
-        <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "6px 8px" }}>
-          <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-            color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>
+        <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "8px 10px" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+            color: "rgba(255,255,255,0.38)", marginBottom: 4 }}>
             🔋 Battery Backup
             {card.batteryBackupMinutes != null && (
               <span style={{ marginLeft: 4, opacity: 0.6 }}>({fmtHrs(card.batteryBackupMinutes / 60)})</span>
             )}
           </div>
           {battRemainS !== null ? (
-            <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "monospace", color: battColor }}>
+            <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "monospace", color: battColor }}>
               {fmtSec(battRemainS)}
             </div>
           ) : (
-            <div style={{ fontSize: 12, fontWeight: 600, color: "rgba(255,255,255,0.3)", paddingTop: 2 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.3)", paddingTop: 2 }}>
               No data
             </div>
           )}
@@ -252,10 +252,10 @@ function RiskCardComp({ card }: { card: RiskCard }) {
 
         {/* ETA remaining */}
         {etaRemainS !== null && (
-          <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "6px 8px" }}>
-            <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-              color: "rgba(255,255,255,0.38)", marginBottom: 3 }}>🚗 ETA</div>
-            <div style={{ fontSize: 18, fontWeight: 900, fontFamily: "monospace",
+          <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "8px 10px" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+              color: "rgba(255,255,255,0.38)", marginBottom: 4 }}>🚗 ETA</div>
+            <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "monospace",
               color: etaRemainS <= 0 ? P.red : "#38D4FF" }}>
               {fmtSec(etaRemainS)}
             </div>
@@ -796,12 +796,12 @@ export default function Dashboard() {
                   boxShadow: `0 0 7px ${riskCards.length > 0 ? P.orange : P.green}`,
                   display: "inline-block",
                   animation: riskCards.some(c => c.severity === "critical") ? "pulse 1.2s infinite" : "none" }} />
-                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.06em",
+                <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.06em",
                   color: riskCards.length > 0 ? P.orange : "rgba(255,255,255,0.55)" }}>
                   AT-RISK SITES
                 </span>
               </div>
-              <span style={{ fontSize: 10, fontWeight: 700,
+              <span style={{ fontSize: 12, fontWeight: 700,
                 background: riskCards.length > 0 ? "rgba(245,158,11,0.18)" : "rgba(255,255,255,0.08)",
                 borderRadius: 10, padding: "1px 8px",
                 color: riskCards.length > 0 ? P.orange : "rgba(255,255,255,0.35)" }}>
