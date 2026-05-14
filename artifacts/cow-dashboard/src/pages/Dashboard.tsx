@@ -130,7 +130,7 @@ function fmtSec(totalSec: number): string {
 
 // ─── Live at-risk site card with count-up + countdown timers ──────────────────
 type AtRiskEntry = {
-  id: string; siteName: string; title: string; createdAt: string; assignedAt?: string;
+  id: string; siteName: string; title: string; description?: string; createdAt: string; assignedAt?: string;
   powerSource?: string; remainingSAL?: number | null; durationMin?: number | null;
   site?: { area?: string | null; powerConfig?: string; batteryUsefulTimeHrs?: number | null };
 };
@@ -182,7 +182,7 @@ function AtRiskCard({ r, pal }: { r: AtRiskEntry; pal: Record<string,string> }) 
         {r.siteName}
       </div>
       <div style={{ fontSize:13, lineHeight:2.0 }}>
-        <Row label="Alarm"      value={r.title || "—"} />
+        <Row label="Alarm"      value={r.description || r.title || "—"} />
         <Row label="Power"      value={powerDesc} />
         <Row label="ETA to Site" value={`${eta}${area ? ` (${area})` : ""}`} color="#38D4FF" />
       </div>
