@@ -1,4 +1,5 @@
 import { dax } from "./pbi";
+import { getSiteData } from "./siteData";
 import { logger } from "./logger";
 import type { Response } from "express";
 
@@ -7,16 +8,6 @@ const POWER_KEYWORDS = ["power", "high temp", "battery", "rectifier", "generator
 function isPowerAlarm(text: string): boolean {
   const lower = (text ?? "").toLowerCase();
   return POWER_KEYWORDS.some(kw => lower.includes(kw));
-}
-
-// ── Power source code → label ─────────────────────────────────────────────────
-function powerLabel(code: string): string {
-  const c = (code ?? "").toString().toUpperCase().trim();
-  if (c === "SG") return "Commercial + Standby Generator";
-  if (c === "SB") return "Commercial + Standby Battery";
-  if (c === "CB") return "Commercial + Standby Battery";
-  if (c === "DG") return "Commercial + Diesel Generator";
-  return c || "Unknown";
 }
 
 // ── RiskCard type ─────────────────────────────────────────────────────────────
@@ -57,35 +48,11 @@ function broadcast() {
   }
 }
 
-// ── Fetch battery backup from PBI (separate query — column name may vary) ─────
-async function fetchBatteryMap(): Promise<Map<string, number | null>> {
-  const map = new Map<string, number | null>();
-  // Try the user-supplied column name; swallow error if PBI rejects it
-  try {
-    const rows = await dax(`
-      EVALUATE
-      SELECTCOLUMNS(
-        FILTER(DB, DB[Region] = "WR-HAJJ"),
-        "siteId",   DB[Site ID],
-        "battHrs",  DB[Batteries Strings MAX useful Time Hours]
-      )
-    `);
-    for (const r of rows) {
-      const sid = (r["[siteId]"] ?? "").toString().trim();
-      const bh  = r["[battHrs]"];
-      if (sid) map.set(sid, bh != null && bh !== "" && !isNaN(Number(bh)) ? Number(bh) : null);
-    }
-  } catch (err: any) {
-    logger.warn({ msg: err?.message?.slice(0, 120) }, "Battery column not found in PBI DB — battery will show 'No data'");
-  }
-  return map;
-}
-
 // ── Poll engine ───────────────────────────────────────────────────────────────
 async function poll() {
   try {
-    // Fetch tickets, site reference data, and battery map from PBI in parallel
-    const [ticketRows, siteRows, batteryMap] = await Promise.all([
+    // 1. Fetch open tickets + area data from PBI in parallel
+    const [ticketRows, areaRows] = await Promise.all([
       dax(`
         EVALUATE
         VAR _hajjSites = SELECTCOLUMNS(FILTER(DB, DB[Region] = "WR-HAJJ"), "sid", DB[Site ID])
@@ -106,26 +73,24 @@ async function poll() {
         EVALUATE
         SELECTCOLUMNS(
           FILTER(DB, DB[Region] = "WR-HAJJ"),
-          "siteId",   DB[Site ID],
-          "area",     DB[Column13],
-          "pwrCfg",   DB[Power Configration]
+          "siteId", DB[Site ID],
+          "area",   DB[Column13]
         )
       `),
-      fetchBatteryMap(),
     ]);
 
-    // Build site lookup map from PBI DB rows
-    const siteMap = new Map<string, { area: string; powerConfiguration: string }>();
-    for (const r of siteRows) {
-      const sid = (r["[siteId]"] ?? "").toString().trim();
-      if (!sid) continue;
-      siteMap.set(sid, {
-        area: (r["[area]"] ?? "").toString().trim(),
-        powerConfiguration: powerLabel((r["[pwrCfg]"] ?? "").toString()),
-      });
+    // 2. Area map from PBI
+    const areaMap = new Map<string, string>();
+    for (const r of areaRows) {
+      const sid  = (r["[siteId]"] ?? "").toString().trim();
+      const area = (r["[area]"]   ?? "").toString().trim();
+      if (sid) areaMap.set(sid, area);
     }
 
-    // Build updated card map
+    // 3. Site reference data from Excel (power source + battery backup)
+    const siteData = getSiteData();
+
+    // 4. Build updated card map
     const incoming = new Set<string>();
     for (const r of ticketRows) {
       const siteId = (r["[siteId]"] ?? "").toString().trim();
@@ -144,17 +109,21 @@ async function poll() {
       const assignedTime = (existing && existing.severity !== "cleared")
         ? existing.assignedTime : assignedMs;
 
-      const site = siteMap.get(siteId) ?? { area: "", powerConfiguration: "Unknown" };
-      const battHrs = batteryMap.get(siteId) ?? null;
-      const batteryBackupMinutes = battHrs != null ? Math.round(battHrs * 60) : null;
+      // Power config + battery from Excel reference sheet
+      const site = siteData.get(siteId);
+      const powerConfiguration  = site?.powerConfiguration  ?? "Unknown";
+      const batteryBackupMinutes = site?.batteryBackupMinutes ?? null;
 
-      // ETA: Makkah Remote = 30 min, all others = 15 min
-      const etaMinutes = site.area.toLowerCase().includes("makkah remote") ? 30 : 15;
+      // ETA: Makkah Remote = 30 min, all others (Arafat / Muzdalifah / Mina / etc.) = 15 min
+      const area = areaMap.get(siteId) ?? "";
+      const etaMinutes = area.toLowerCase().includes("makkah remote") ? 30 : 15;
 
+      // Expiry timestamps
       const batteryExpiry = batteryBackupMinutes != null
         ? assignedTime + batteryBackupMinutes * 60_000 : null;
       const etaExpiry = assignedTime + etaMinutes * 60_000;
 
+      // Severity: critical if battery depletes before ETA arrives
       const now = Date.now();
       const battRemain = batteryExpiry != null ? batteryExpiry - now : Infinity;
       const severity: RiskCard["severity"] = battRemain < (etaExpiry - now) ? "critical" : "normal";
@@ -164,13 +133,13 @@ async function poll() {
 
       activeRiskCards.set(siteId, {
         siteId, alarmType, alarmDescription, assignedTime,
-        powerConfiguration: site.powerConfiguration,
-        batteryBackupMinutes, etaMinutes, batteryExpiry, etaExpiry, severity,
+        powerConfiguration, batteryBackupMinutes,
+        etaMinutes, batteryExpiry, etaExpiry, severity,
       });
       incoming.add(siteId);
     }
 
-    // Mark cleared cards
+    // 5. Mark cleared cards
     const now = Date.now();
     for (const [siteId, card] of activeRiskCards) {
       if (!incoming.has(siteId) && card.severity !== "cleared") {
