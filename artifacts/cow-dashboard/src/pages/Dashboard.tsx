@@ -571,7 +571,8 @@ export default function Dashboard() {
           <span style={{ color: P.green, fontSize: 13, fontWeight: 800 }}>LIVE</span>
         </div>
 
-        <img src="/aces-logo.png" alt="ACES" style={{ height: 52, objectFit: "contain" }} />
+        <img src="/aces-logo-login.png" alt="ACES Managed Services"
+          style={{ height: 48, objectFit: "contain", mixBlendMode: "screen" }} />
 
         <button
           onClick={() => { sessionStorage.removeItem("cow_token"); window.location.reload(); }}
