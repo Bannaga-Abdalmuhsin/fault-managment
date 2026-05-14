@@ -229,7 +229,7 @@ function RiskCardComp({ card }: { card: RiskCard }) {
 
       {/* Timer boxes */}
       <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}`, paddingTop: 8,
-        display: "flex", gap: 6 }}>
+        display: "flex", flexDirection: "column", gap: 6 }}>
         {/* Battery backup countdown */}
         <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "6px 8px" }}>
           <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
