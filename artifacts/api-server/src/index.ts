@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startRiskEngine } from "./lib/riskEngine";
+import { getSiteDataAsync } from "./lib/siteData";
 
 const rawPort = process.env["PORT"];
 
@@ -23,5 +24,11 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
-  startRiskEngine();
+  // Pre-warm Excel site-data cache before starting risk engine
+  getSiteDataAsync().then(() => {
+    startRiskEngine();
+  }).catch((e) => {
+    logger.error({ err: e }, "Site data pre-warm failed — starting risk engine anyway");
+    startRiskEngine();
+  });
 });
