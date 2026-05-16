@@ -572,7 +572,6 @@ export default function Dashboard() {
         // YELLOW = site operational but has an open ticket
         hasPowerTicket: s.status === "offline",
         hasNsaTicket:   s.status !== "offline" && openAnyTicket.has(s.name),
-        fuelPct: s.batteryUsefulTimeHrs ?? null,
       }));
   }, [areaSites, cowIdFilter, powerTix, telecomTix]);
 

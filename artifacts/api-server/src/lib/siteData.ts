@@ -1,5 +1,5 @@
 import path from "node:path";
-import ExcelJS from "exceljs";
+import * as XLSX from "xlsx";
 import { logger } from "./logger";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -32,62 +32,33 @@ function parseBatteryTime(raw: string | null | undefined): number | null {
   return total > 0 ? total : null;
 }
 
-// ── Cell value → string helper ────────────────────────────────────────────────
-function cellStr(val: ExcelJS.CellValue): string {
-  if (val == null) return "";
-  if (typeof val === "object" && "text" in (val as Record<string, unknown>))
-    return String((val as Record<string, unknown>).text).trim();
-  return String(val).trim();
-}
-
 // ── Load and parse the Excel reference sheet ─────────────────────────────────
 const BATT_COL = "Batteries Strings MAX useful Time\r\nHours";
 const DATA_PATH = path.resolve(process.cwd(), "data", "cows-list.xlsx");
 
 let _cache: Map<string, SiteRecord> | null = null;
 
-export async function getSiteDataAsync(): Promise<Map<string, SiteRecord>> {
+export function getSiteData(): Map<string, SiteRecord> {
   if (_cache) return _cache;
 
   try {
-    const wb = new ExcelJS.Workbook();
-    await wb.xlsx.readFile(DATA_PATH);
-
-    const ws = wb.worksheets[0];
-    if (!ws) throw new Error("No worksheet found in Excel file");
-
-    // Build header → column index map from row 1
-    const headers: Record<string, number> = {};
-    const headerRow = ws.getRow(1);
-    headerRow.eachCell((cell, colNum) => {
-      const key = cellStr(cell.value).trim();
-      if (key) headers[key] = colNum;
-    });
-
-    // Find the battery column (key may include \r\n)
-    const battColNum = headers[BATT_COL]
-      ?? Object.entries(headers).find(([k]) => k.includes("Batteries Strings MAX"))?.[1]
-      ?? null;
-
-    const cowIdCol = headers["COW ID "] ?? headers["COW ID"] ?? null;
-    const pwrSrcCol = headers["Power Source"] ?? null;
+    const wb   = XLSX.readFile(DATA_PATH);
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: null });
 
     _cache = new Map();
-
-    ws.eachRow((row, rowNum) => {
-      if (rowNum === 1) return; // skip header
-      const siteId = cowIdCol ? cellStr(row.getCell(cowIdCol).value).trim() : "";
-      if (!siteId) return;
-      const pwrCode = pwrSrcCol ? cellStr(row.getCell(pwrSrcCol).value).trim() : "";
-      const battRaw = battColNum ? cellStr(row.getCell(battColNum).value) : null;
-      _cache!.set(siteId, {
+    for (const row of rows) {
+      const siteId = ((row["COW ID "] ?? row["COW ID"]) ?? "").toString().trim();
+      if (!siteId) continue;
+      const pwrCode = (row["Power Source"] ?? "").toString().trim();
+      const battRaw = (row[BATT_COL] ?? null) as string | null;
+      _cache.set(siteId, {
         siteId,
         powerSource: pwrCode,
         powerConfiguration: powerLabel(pwrCode),
         batteryBackupMinutes: parseBatteryTime(battRaw),
       });
-    });
-
+    }
     logger.info({ count: _cache.size }, "Site reference data loaded from Excel");
   } catch (err: any) {
     logger.error({ err }, "Failed to load site reference Excel — battery/power data will be unavailable");
@@ -95,9 +66,4 @@ export async function getSiteDataAsync(): Promise<Map<string, SiteRecord>> {
   }
 
   return _cache;
-}
-
-// ── Synchronous cache accessor (call after getSiteDataAsync resolves) ─────────
-export function getSiteData(): Map<string, SiteRecord> {
-  return _cache ?? new Map();
 }

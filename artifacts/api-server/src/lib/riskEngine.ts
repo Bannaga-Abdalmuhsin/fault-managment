@@ -1,5 +1,5 @@
 import { dax } from "./pbi";
-import { getSiteDataAsync } from "./siteData";
+import { getSiteData } from "./siteData";
 import { logger } from "./logger";
 import type { Response } from "express";
 
@@ -88,7 +88,7 @@ async function poll() {
     }
 
     // 3. Site reference data from Excel (power source + battery backup)
-    const siteData = await getSiteDataAsync();
+    const siteData = getSiteData();
 
     // 4. Build updated card map
     const incoming = new Set<string>();
