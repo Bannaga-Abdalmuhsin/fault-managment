@@ -165,8 +165,8 @@ overrides:
   brace-expansion: ">=2.1.0"
   # GHSA-rhx6-c78j-4q9w / GHSA-9wv6-86v2-598j (path-to-regexp ReDoS/DoS)
   path-to-regexp: ">=8.4.2"
-  # GHSA-g644-9gfx-98mj (lodash prototype pollution)
-  lodash: ">=4.17.21"
+  # GHSA-g644-9gfx-98mj / GHSA-f23m-r3pf-42rh (lodash prototype pollution — patched in 4.18.0)
+  lodash: ">=4.18.0"
   # GHSA-952p-6rrq-rcjv (postcss line return parsing error)
   postcss: ">=8.5.14"
   # GHSA-mwcw-c2x4-8c55 / GHSA-52gr-wr4r-9258 (fast-uri path traversal)
