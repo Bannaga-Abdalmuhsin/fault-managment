@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <filter id="glow-down" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.8" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Truck shadow -->
+  <ellipse cx="38" cy="58" rx="16" ry="3" fill="rgba(0,0,0,0.22)"/>
+
+  <!-- Truck bed top face -->
+  <polygon points="18,50 50,50 54,47 22,47" fill="#E8E8E8"/>
+  <!-- Bed left face -->
+  <polygon points="18,50 18,53 22,50 22,47" fill="#C8C8C8"/>
+  <!-- Bed right face -->
+  <polygon points="50,50 50,53 54,50 54,47" fill="#D4D4D4"/>
+  <!-- Bed front face -->
+  <polygon points="18,50 50,50 50,53 18,53" fill="#DADADA"/>
+
+  <!-- Cab top -->
+  <polygon points="44,47 54,47 56,44 46,44" fill="#F0F0F0"/>
+  <!-- Cab front -->
+  <polygon points="44,47 44,53 54,53 54,47" fill="#E0E0E0"/>
+  <!-- Windshield -->
+  <polygon points="46,44 56,44 56,48 46,48" fill="#CCDDEE" opacity="0.8"/>
+  <!-- Window -->
+  <polygon points="47,44.5 54,44.5 54,47.5 47,47.5" fill="#4466AA" opacity="0.6"/>
+  <!-- Cab roof -->
+  <polygon points="46,42 52,42 54,44 46,44" fill="#E8E8E8"/>
+
+  <!-- Wheels -->
+  <ellipse cx="24" cy="53.5" rx="3" ry="2.2" fill="#444"/>
+  <ellipse cx="24" cy="53.5" rx="1.5" ry="1" fill="#888"/>
+  <ellipse cx="31" cy="53.5" rx="3" ry="2.2" fill="#444"/>
+  <ellipse cx="31" cy="53.5" rx="1.5" ry="1" fill="#888"/>
+  <ellipse cx="46" cy="53.5" rx="3" ry="2.2" fill="#444"/>
+  <ellipse cx="46" cy="53.5" rx="1.5" ry="1" fill="#888"/>
+
+  <!-- Tower — RED = DOWN -->
+  <g filter="url(#glow-down)">
+    <line x1="26" y1="20" x2="21" y2="47" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="30" y1="20" x2="36" y2="47" stroke="#EF4444" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="24" y1="20" x2="20" y2="47" stroke="#AA1111" stroke-width="1" opacity="0.5"/>
+    <line x1="32" y1="20" x2="37" y2="47" stroke="#AA1111" stroke-width="1" opacity="0.5"/>
+
+    <line x1="21" y1="42" x2="36" y2="39" stroke="#EF4444" stroke-width="1.2"/>
+    <line x1="21" y1="39" x2="36" y2="42" stroke="#EF4444" stroke-width="1.2"/>
+    <line x1="22" y1="34" x2="35" y2="31" stroke="#EF4444" stroke-width="1.2"/>
+    <line x1="22" y1="31" x2="35" y2="34" stroke="#EF4444" stroke-width="1.2"/>
+    <line x1="24" y1="26" x2="33" y2="24" stroke="#EF4444" stroke-width="1.2"/>
+    <line x1="24" y1="24" x2="33" y2="26" stroke="#EF4444" stroke-width="1.2"/>
+
+    <line x1="21" y1="42" x2="36" y2="42" stroke="#EF4444" stroke-width="1" opacity="0.7"/>
+    <line x1="22" y1="34" x2="35" y2="34" stroke="#EF4444" stroke-width="1" opacity="0.7"/>
+    <line x1="23" y1="26" x2="34" y2="26" stroke="#EF4444" stroke-width="1" opacity="0.7"/>
+
+    <line x1="28" y1="6" x2="28" y2="21" stroke="#EF4444" stroke-width="2" stroke-linecap="round"/>
+
+    <rect x="24.5" y="10" width="2.5" height="9" rx="1" fill="#EF4444"/>
+    <rect x="30" y="10" width="2.5" height="9" rx="1" fill="#EF4444"/>
+    <rect x="26" y="7" width="4" height="7" rx="1" fill="#FEE2E2" stroke="#EF4444" stroke-width="0.8"/>
+  </g>
+
+  <!-- Status dot — fast pulsing red -->
+  <circle cx="28" cy="5" r="3" fill="#EF4444" opacity="0.95">
+    <animate attributeName="opacity" values="0.95;0.2;0.95" dur="0.9s" repeatCount="indefinite"/>
+  </circle>
+  <circle cx="28" cy="5" r="5" fill="none" stroke="#EF4444" stroke-width="1.2" opacity="0.5">
+    <animate attributeName="r" values="3;8;3" dur="0.9s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.5;0;0.5" dur="0.9s" repeatCount="indefinite"/>
+  </circle>
+</svg>

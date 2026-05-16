@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <filter id="glow-up" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadow-up" x="-20%" y="-10%" width="140%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="rgba(0,0,0,0.4)"/>
+    </filter>
+  </defs>
+
+  <!-- Truck shadow (ellipse under vehicle) -->
+  <ellipse cx="38" cy="58" rx="16" ry="3" fill="rgba(0,0,0,0.22)"/>
+
+  <!-- ── Truck bed (isometric flat platform) ── -->
+  <!-- Top face of platform -->
+  <polygon points="18,50 50,50 54,47 22,47" fill="#E8E8E8"/>
+  <!-- Left face -->
+  <polygon points="18,50 18,53 22,50 22,47" fill="#C8C8C8"/>
+  <!-- Right face -->
+  <polygon points="50,50 50,53 54,50 54,47" fill="#D4D4D4"/>
+  <!-- Front face -->
+  <polygon points="18,50 50,50 50,53 18,53" fill="#DADADA"/>
+
+  <!-- ── Truck cab ── -->
+  <!-- Cab top face -->
+  <polygon points="44,47 54,47 56,44 46,44" fill="#F0F0F0"/>
+  <!-- Cab front face -->
+  <polygon points="44,47 44,53 54,53 54,47" fill="#E0E0E0"/>
+  <!-- Cab side (windshield area) -->
+  <polygon points="46,44 56,44 56,48 46,48" fill="#CCDDEE" opacity="0.8"/>
+  <!-- Cab dark window -->
+  <polygon points="47,44.5 54,44.5 54,47.5 47,47.5" fill="#4466AA" opacity="0.6"/>
+  <!-- Cab roof bump -->
+  <polygon points="46,42 52,42 54,44 46,44" fill="#E8E8E8"/>
+
+  <!-- Wheels -->
+  <ellipse cx="24" cy="53.5" rx="3" ry="2.2" fill="#444"/>
+  <ellipse cx="24" cy="53.5" rx="1.5" ry="1" fill="#888"/>
+  <ellipse cx="31" cy="53.5" rx="3" ry="2.2" fill="#444"/>
+  <ellipse cx="31" cy="53.5" rx="1.5" ry="1" fill="#888"/>
+  <ellipse cx="46" cy="53.5" rx="3" ry="2.2" fill="#444"/>
+  <ellipse cx="46" cy="53.5" rx="1.5" ry="1" fill="#888"/>
+
+  <!-- ── Tower (lattice) — GREEN = UP ── -->
+  <g filter="url(#glow-up)">
+    <!-- Tower legs (4 posts) -->
+    <line x1="26" y1="20" x2="21" y2="47" stroke="#00C878" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="30" y1="20" x2="36" y2="47" stroke="#00C878" stroke-width="1.8" stroke-linecap="round"/>
+    <line x1="24" y1="20" x2="20" y2="47" stroke="#008855" stroke-width="1" opacity="0.5"/>
+    <line x1="32" y1="20" x2="37" y2="47" stroke="#008855" stroke-width="1" opacity="0.5"/>
+
+    <!-- Cross braces level 1 (bottom) -->
+    <line x1="21" y1="42" x2="36" y2="39" stroke="#00C878" stroke-width="1.2"/>
+    <line x1="21" y1="39" x2="36" y2="42" stroke="#00C878" stroke-width="1.2"/>
+    <!-- Cross braces level 2 (mid) -->
+    <line x1="22" y1="34" x2="35" y2="31" stroke="#00C878" stroke-width="1.2"/>
+    <line x1="22" y1="31" x2="35" y2="34" stroke="#00C878" stroke-width="1.2"/>
+    <!-- Cross braces level 3 (upper) -->
+    <line x1="24" y1="26" x2="33" y2="24" stroke="#00C878" stroke-width="1.2"/>
+    <line x1="24" y1="24" x2="33" y2="26" stroke="#00C878" stroke-width="1.2"/>
+
+    <!-- Horizontal braces -->
+    <line x1="21" y1="42" x2="36" y2="42" stroke="#00C878" stroke-width="1" opacity="0.7"/>
+    <line x1="22" y1="34" x2="35" y2="34" stroke="#00C878" stroke-width="1" opacity="0.7"/>
+    <line x1="23" y1="26" x2="34" y2="26" stroke="#00C878" stroke-width="1" opacity="0.7"/>
+
+    <!-- Tower top mast -->
+    <line x1="28" y1="6" x2="28" y2="21" stroke="#00C878" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- Antennas -->
+    <rect x="24.5" y="10" width="2.5" height="9" rx="1" fill="#00C878"/>
+    <rect x="30" y="10" width="2.5" height="9" rx="1" fill="#00C878"/>
+    <rect x="26" y="7" width="4" height="7" rx="1" fill="#E0F8F0" stroke="#00C878" stroke-width="0.8"/>
+  </g>
+
+  <!-- Status dot on top -->
+  <circle cx="28" cy="5" r="3" fill="#00C878" opacity="0.9">
+    <animate attributeName="opacity" values="0.9;0.4;0.9" dur="2.5s" repeatCount="indefinite"/>
+  </circle>
+</svg>
