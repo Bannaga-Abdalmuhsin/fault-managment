@@ -671,7 +671,7 @@ export default function Dashboard() {
             style={{ height: 140, objectFit: "contain",
               filter: "brightness(2.2) sepia(0.3) saturate(2.2) drop-shadow(0 2px 12px rgba(0,0,0,0.7))" }} />
           <img src="/kaaba-icon.png" alt="Kaaba"
-            style={{ height: 140, objectFit: "contain", marginTop: 30,
+            style={{ height: 112, objectFit: "contain", marginTop: 30,
               filter: "drop-shadow(0 2px 14px rgba(0,0,0,0.8))" }} />
         </div>
 
