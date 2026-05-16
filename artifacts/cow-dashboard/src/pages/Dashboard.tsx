@@ -80,11 +80,12 @@ function useClock() {
 function Glass({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
     <div style={{
-      background: P.glass,
-      backdropFilter: "blur(16px)",
-      WebkitBackdropFilter: "blur(16px)",
-      border: `1px solid ${P.glassBorder}`,
-      borderRadius: 14,
+      background: "rgba(78,0,142,0.76)",
+      backdropFilter: "blur(18px)",
+      WebkitBackdropFilter: "blur(18px)",
+      border: "1px solid rgba(200,140,255,0.22)",
+      borderRadius: 16,
+      boxShadow: "0 14px 40px rgba(20,0,42,0.22)",
       ...style,
     }}>
       {children}
@@ -96,7 +97,7 @@ function Glass({ children, style }: { children: React.ReactNode; style?: React.C
 function SLabel({ text }: { text: string }) {
   return (
     <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.14em",
-      textTransform: "uppercase", color: "rgba(220,180,255,0.85)", marginBottom: 4 }}>
+      textTransform: "uppercase", color: "rgba(235,210,255,0.9)", marginBottom: 6 }}>
       {text}
     </div>
   );
@@ -347,20 +348,20 @@ function FilterBtn({ label, active, onClick }: { label: string; active: boolean;
 
 // ─── Shared table chrome ───────────────────────────────────────────────────────
 const TH_STYLE: React.CSSProperties = {
-  padding: "5px 9px", fontSize: 11, fontWeight: 800, textAlign: "left",
-  color: "rgba(220,180,255,0.95)", borderBottom: "1px solid rgba(255,255,255,0.1)",
-  position: "sticky", top: 0, background: "rgba(50,0,100,0.97)",
+  padding: "7px 10px", fontSize: 11, fontWeight: 800, textAlign: "left",
+  color: "rgba(235,210,255,0.95)", borderBottom: "1px solid rgba(255,255,255,0.08)",
+  position: "sticky", top: 0, background: "rgba(50,0,100,0.98)",
   letterSpacing: "0.06em", textTransform: "uppercase", whiteSpace: "nowrap",
 };
-const TD_STYLE: React.CSSProperties = { padding: "4px 9px", fontSize: 12, fontWeight: 500 };
+const TD_STYLE: React.CSSProperties = { padding: "6px 10px", fontSize: 12, fontWeight: 500 };
 
 function TableShell({ title, accent, count, loading, cols, children, alert }: {
   title: string; accent: string; count: number; loading: boolean;
   cols: string[]; children: React.ReactNode; alert?: boolean;
 }) {
   return (
-    <div style={{ borderRadius: 10, overflow: "hidden", display: "flex", flexDirection: "column",
-      background: "rgba(78,0,142,0.88)", backdropFilter: "blur(14px)",
+    <div style={{ borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column",
+      background: "rgba(78,0,142,0.86)", backdropFilter: "blur(14px)",
       border: alert ? `1px solid ${accent}88` : `1px solid ${P.glassBorder}`,
       boxShadow: alert ? `0 0 18px ${accent}33` : "none",
       transition: "border 0.3s, box-shadow 0.3s" }}>
@@ -368,7 +369,7 @@ function TableShell({ title, accent, count, loading, cols, children, alert }: {
           ? `linear-gradient(90deg, ${accent}55, ${accent}33)`
           : `linear-gradient(90deg, ${P.purpleDark}, ${P.purple})`,
         color: "#fff", fontSize: 14, fontWeight: 800,
-        padding: "6px 12px", display: "flex", alignItems: "center", gap: 8,
+        padding: "8px 12px", display: "flex", alignItems: "center", gap: 8,
         transition: "background 0.3s" }}>
         <span style={{ width: 9, height: 9, borderRadius: "50%", display: "inline-block",
           background: accent, boxShadow: `0 0 8px ${accent}`,
