@@ -158,3 +158,18 @@ overrides:
   # drizzle-kit uses esbuild internally on an older version that's vulnerable, this overrides it
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
+  # ── Security patches ────────────────────────────────────────────────────────
+  # GHSA-fmg4-x8pw-hjng / GHSA-brh3-hq3g-6x3p (picomatch ReDoS)
+  picomatch: ">=4.0.4"
+  # GHSA-p2jh-44qj-pf2v (brace-expansion ReDoS)
+  brace-expansion: ">=2.1.0"
+  # GHSA-rhx6-c78j-4q9w / GHSA-9wv6-86v2-598j (path-to-regexp ReDoS/DoS)
+  path-to-regexp: ">=8.4.2"
+  # GHSA-g644-9gfx-98mj (lodash prototype pollution)
+  lodash: ">=4.17.21"
+  # GHSA-952p-6rrq-rcjv (postcss line return parsing error)
+  postcss: ">=8.5.14"
+  # GHSA-mwcw-c2x4-8c55 / GHSA-52gr-wr4r-9258 (fast-uri path traversal)
+  fast-uri: ">=3.1.2"
+  # GHSA-48c2-rrv3-qjmp (yaml stack overflow via deeply nested structure)
+  yaml: ">=2.8.3"
