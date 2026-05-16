@@ -163,6 +163,7 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
 
       // Initialize exactly as the reference pattern:
       // disableDefaultUI:true then re-enable specific controls
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const map = new Map(containerRef.current, {
         center:          { lat: view.lat, lng: view.lng },
         zoom:            view.zoom,
@@ -172,7 +173,9 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
         disableDefaultUI: true,
         // "DEMO_MAP_ID" is Google's built-in test map ID — enables AdvancedMarkerElement
         mapId:           "DEMO_MAP_ID",
-      });
+        // monochrome light style (overrides DEMO_MAP_ID dark theme)
+        colorScheme:     "LIGHT",
+      } as Parameters<InstanceType<typeof Map>["setOptions"]>[0] & { colorScheme: string });
 
       // Selectively re-enable controls
       map.setOptions({
@@ -189,11 +192,22 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
       mapRef.current = map;
       map.addListener("click", () => setSelected(null));
       placeMarkers(sitesRef.current, map, markerLib);
+
+      // Monochrome tile filter — targets only canvas/img tile layers.
+      // AdvancedMarkerElement renders as HTML divs so markers stay colorful.
+      if (!document.getElementById("gm-monochrome")) {
+        const s = document.createElement("style");
+        s.id = "gm-monochrome";
+        s.textContent =
+          `.gm-style canvas,.gm-style img{filter:grayscale(1) brightness(1.08)!important}`;
+        document.head.appendChild(s);
+      }
     });
 
     return () => {
       clearMarkers();
       mapRef.current = null;
+      document.getElementById("gm-monochrome")?.remove();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
