@@ -35,7 +35,8 @@ function parseBatteryTime(raw: string | null | undefined): number | null {
 // ── Cell value → string helper ────────────────────────────────────────────────
 function cellStr(val: ExcelJS.CellValue): string {
   if (val == null) return "";
-  if (typeof val === "object" && "text" in (val as any)) return String((val as any).text);
+  if (typeof val === "object" && "text" in (val as Record<string, unknown>))
+    return String((val as Record<string, unknown>).text).trim();
   return String(val).trim();
 }
 
