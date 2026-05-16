@@ -105,45 +105,24 @@ function injectMapCSS() {
   _cssReady = true;
   const s = document.createElement("style");
   s.textContent = `
-/* ── Pulse rings ──────────────────────────────────────────────── */
-@keyframes cowPulse {
-  0%   { transform:scale(0.85); opacity:0.90; }
-  65%  { transform:scale(2.60); opacity:0;    }
-  100% { transform:scale(2.60); opacity:0;    }
-}
-@keyframes cowPulse2 {
-  0%   { transform:scale(0.85); opacity:0.55; }
-  65%  { transform:scale(2.05); opacity:0;    }
-  100% { transform:scale(2.05); opacity:0;    }
-}
 /* ── Marker shell ─────────────────────────────────────────────── */
 .cow-mkr {
-  position:relative; width:46px; height:46px;
+  position:relative; width:40px; height:40px;
   display:flex; align-items:center; justify-content:center;
   cursor:pointer;
 }
-.cow-ring {
-  position:absolute; width:36px; height:36px; border-radius:50%;
-  animation:cowPulse 2.5s ease-out infinite;
-}
-.cow-ring2 {
-  position:absolute; width:36px; height:36px; border-radius:50%;
-  animation:cowPulse2 2.5s ease-out infinite;
-  animation-delay:0.80s;
-}
-.cow-core {
-  position:relative; z-index:1;
-  width:34px; height:34px; border-radius:50%;
+.cow-icon {
+  width:36px; height:36px; border-radius:50%;
   display:flex; align-items:center; justify-content:center;
   border:2.5px solid;
-  backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px);
+  box-shadow:0 2px 10px rgba(0,0,0,0.55);
   transition:transform 0.18s ease;
 }
-.cow-core img {
-  width:20px; height:20px; object-fit:contain; pointer-events:none;
-  filter:brightness(1.4) drop-shadow(0 0 4px rgba(255,255,255,0.45));
+.cow-icon img {
+  width:22px; height:22px; object-fit:contain; pointer-events:none;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,0.5));
 }
-.cow-mkr:hover .cow-core { transform:scale(1.24); }
+.cow-mkr:hover .cow-icon { transform:scale(1.18); }
 
 /* ── MapLibre control theme ───────────────────────────────────── */
 .maplibregl-ctrl-group {
@@ -220,9 +199,7 @@ function makeMarkerEl(site: MapSite): HTMLElement {
   el.className = "cow-mkr";
   el.title = site.name;
   el.innerHTML = `
-    <div class="cow-ring"  style="border:2px solid ${c.color};box-shadow:0 0 8px ${c.color};"></div>
-    <div class="cow-ring2" style="border:2px solid ${c.color};"></div>
-    <div class="cow-core" style="background:${c.bg};border-color:${c.color};box-shadow:0 0 22px ${c.glow},0 2px 14px rgba(0,0,0,0.55);">
+    <div class="cow-icon" style="background:${c.bg};border-color:${c.color};">
       <img src="/cow-truck-icon.png" alt="" />
     </div>
   `;
