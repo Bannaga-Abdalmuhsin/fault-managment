@@ -291,10 +291,10 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
       {/* ── Map canvas ───────────────────────────────────────────────── */}
       <div ref={containerRef} style={{ width:"100%", height:"100%" }} />
 
-      {/* ── Map controls — top-right ─────────────────────────────── */}
+      {/* ── Map controls — bottom-left (where legend was) ───────── */}
       <div style={{
-        position:"absolute", top:36, right:12, zIndex:20,
-        display:"flex", flexDirection:"column", gap:6, alignItems:"flex-end",
+        position:"absolute", bottom:26, left:10, zIndex:20,
+        display:"flex", flexDirection:"column", gap:6, alignItems:"flex-start",
       }}>
         {/* Map type */}
         <div style={{
