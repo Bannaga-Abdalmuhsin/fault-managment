@@ -568,6 +568,8 @@ export default function Dashboard() {
         id: i as unknown as number, name: s.name, zone: s.zone ?? "Hajj",
         status: s.status, latitude: s.latitude!, longitude: s.longitude!,
         siteClass: s.siteLabel,
+        powerConfig: s.powerConfig,
+        batteryUsefulTimeHrs: s.batteryUsefulTimeHrs,
         // RED  = site is offline/down (status driven, not ticket-type driven)
         // YELLOW = site operational but has an open ticket
         hasPowerTicket: s.status === "offline",
