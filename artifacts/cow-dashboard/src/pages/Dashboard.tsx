@@ -679,6 +679,11 @@ export default function Dashboard() {
         {/* At h=140: transparent-top=15px → top=28-15=13 to align content below ticker */}
         <div style={{ position: "absolute", top: 13, right: "calc(50% + 150px)",
           zIndex: 950, pointerEvents: "none" }}>
+          <div style={{ position: "absolute", left: "50%", top: 58, transform: "translateX(-50%)",
+            fontSize: 12, fontWeight: 900, letterSpacing: "0.14em", color: "#4E008E",
+            textShadow: "0 1px 3px rgba(0,0,0,0.55)" }}>
+            COW
+          </div>
           <img src="/cow-truck-icon.png" alt="COW Truck"
             style={{ height: 140, objectFit: "contain",
               filter: "brightness(0) invert(1) drop-shadow(0 2px 10px rgba(0,0,0,0.8))" }} />
