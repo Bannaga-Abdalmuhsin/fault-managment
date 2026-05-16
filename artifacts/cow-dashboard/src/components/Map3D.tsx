@@ -244,7 +244,7 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
       .filter(s => s.latitude != null && s.longitude != null)
       .forEach(site => {
         const col         = site.hasPowerTicket ? COL.red : site.hasNsaTicket ? COL.yellow : COL.green;
-        const statusLabel = site.hasPowerTicket ? "DOWN — Power Fault" : site.hasNsaTicket ? "ALARM — NSA Issue" : "UP — Operational";
+        const statusLabel = site.hasPowerTicket ? "Power Outage" : site.hasNsaTicket ? "NSA Ticket" : "Operational";
         const isCritical  = !!site.hasPowerTicket;
 
         const pinEl = buildPinElement(col, isCritical);
@@ -372,9 +372,9 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
           Site Status
         </div>
         {([
-          { c: COL.green,  label:"UP",    count: upCount   },
-          { c: COL.yellow, label:"ALARM", count: almCount  },
-          { c: COL.red,    label:"DOWN",  count: downCount },
+          { c: COL.green,  label:"Operational", count: upCount   },
+          { c: COL.yellow, label:"NSA Ticket",  count: almCount  },
+          { c: COL.red,    label:"Power Outage",count: downCount },
         ] as const).map(({ c, label, count }) => (
           <div key={label} style={{ display:"flex", alignItems:"center", gap:8, marginBottom:5, fontSize:12 }}>
             <span style={{ width:10, height:10, borderRadius:"50%", flexShrink:0,

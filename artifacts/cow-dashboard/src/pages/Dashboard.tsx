@@ -857,18 +857,6 @@ export default function Dashboard() {
           </Glass>
         </div>
 
-        {/* ── Map legend (bottom-left, above Leaflet attribution) ────────── */}
-        <Glass style={{ position: "absolute", bottom: 26, left: 10, zIndex: 900,
-          padding: "7px 12px", display: "flex", flexDirection: "column", gap: 5 }}>
-          {[{ color: "#00C878", label: "Operational" }, { color: P.orange, label: "NSA Ticket" }, { color: P.red, label: "Power Outage" }]
-            .map(({ color, label }) => (
-              <div key={label} style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                <div style={{ width: 9, height: 9, borderRadius: "50%",
-                  background: color, boxShadow: `0 0 6px ${color}` }} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: "#fff" }}>{label}</span>
-              </div>
-            ))}
-        </Glass>
 
         {/* ── Syncing badge ──────────────────────────────────────────────── */}
         {sitesLoading && (
