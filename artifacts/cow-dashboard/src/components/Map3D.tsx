@@ -5,6 +5,9 @@ import "leaflet/dist/leaflet.css";
 const STC_GREEN  = "#00C878";   // operational — no tickets
 const STC_YELLOW = "#F59E0B";   // has open NSA / telecom ticket
 const STC_RED    = "#EF4444";   // has open power outage ticket
+const SITE_ICON_GREEN = "/site-up.svg";
+const SITE_ICON_YELLOW = "/site-alarm.svg";
+const SITE_ICON_RED = "/site-down.svg";
 
 export interface MapSite {
   id: number;
@@ -276,18 +279,20 @@ function LeafletMap({ sites, areaFilter }: Map3DProps) {
           : site.hasNsaTicket
           ? STC_YELLOW
           : STC_GREEN;
+      const iconUrl = site.hasPowerTicket
+        ? SITE_ICON_RED
+        : site.hasNsaTicket
+        ? SITE_ICON_YELLOW
+        : SITE_ICON_GREEN;
 
-        // Use DivIcon with an SVG circle — anchored to the exact coordinate
-        // at every zoom level (unlike CircleMarker which drifts in pixel space).
         const icon = L.divIcon({
           className: "",
-          html: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20">
-            <circle cx="10" cy="10" r="7" fill="${color}" stroke="white" stroke-width="2"
-              style="filter:drop-shadow(0 1px 3px rgba(0,0,0,0.55))" />
-          </svg>`,
-          iconSize: [20, 20],
-          iconAnchor: [10, 10],
-          tooltipAnchor: [0, -12],
+        html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45));">
+          <img src="${iconUrl}" alt="" style="width:28px;height:28px;display:block" />
+        </div>`,
+          iconSize: [28, 28],
+          iconAnchor: [14, 22],
+          tooltipAnchor: [0, -16],
         });
 
         const marker = L.marker([site.latitude!, site.longitude!], { icon });
