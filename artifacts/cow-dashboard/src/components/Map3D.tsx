@@ -138,6 +138,8 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
 
   const [selected, setSelected]     = useState<SelectedSite | null>(null);
   const [updateTime, setUpdateTime] = useState(fmtTime());
+  const [mapType, setMapType]       = useState<"hybrid" | "roadmap" | "terrain">("hybrid");
+  const [is3D, setIs3D]             = useState(true);
 
   useEffect(() => {
     if (!selected) return;
@@ -211,6 +213,20 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
     placeMarkers(sites, map, markerLibRef.current);
   }, [sites]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Map type switcher ────────────────────────────────────────────────────
+  useEffect(() => {
+    mapRef.current?.setMapTypeId(mapType);
+  }, [mapType]);
+
+  // ── 3D / 2D toggle ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const v = AREA_VIEWS[areaFilter] ?? AREA_VIEWS.All;
+    map.moveCamera({ tilt: is3D ? v.tilt : 0, heading: is3D ? v.heading : 0 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [is3D]);
+
   // ── Helpers ───────────────────────────────────────────────────────────────
   const clearMarkers = useCallback(() => {
     markersRef.current.forEach(m => { m.map = null; });
@@ -274,6 +290,72 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
 
       {/* ── Map canvas ───────────────────────────────────────────────── */}
       <div ref={containerRef} style={{ width:"100%", height:"100%" }} />
+
+      {/* ── Map controls — top-right ─────────────────────────────── */}
+      <div style={{
+        position:"absolute", top:36, right:12, zIndex:20,
+        display:"flex", flexDirection:"column", gap:6, alignItems:"flex-end",
+      }}>
+        {/* Map type */}
+        <div style={{
+          background:"rgba(6,0,16,0.84)",
+          backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
+          border:"1px solid rgba(200,140,255,0.22)",
+          borderRadius:10, padding:"4px 5px",
+          display:"flex", gap:3,
+          boxShadow:"0 4px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
+        }}>
+          {([
+            { id:"hybrid",  icon:"🛰", label:"Satellite" },
+            { id:"roadmap", icon:"🗺", label:"Road"      },
+            { id:"terrain", icon:"⛰", label:"Terrain"   },
+          ] as const).map(({ id, icon, label }) => (
+            <button key={id} onClick={() => setMapType(id)} title={label}
+              style={{
+                background: mapType===id ? "rgba(200,140,255,0.25)" : "transparent",
+                border:     mapType===id ? "1px solid rgba(200,140,255,0.48)" : "1px solid transparent",
+                borderRadius:7,
+                color:      mapType===id ? "#ded0f5" : "rgba(255,255,255,0.5)",
+                cursor:"pointer", fontSize:11, fontWeight:700,
+                padding:"4px 9px",
+                display:"flex", alignItems:"center", gap:4,
+                transition:"all 0.15s", whiteSpace:"nowrap",
+                letterSpacing:"0.03em",
+              }}>
+              <span style={{ fontSize:13 }}>{icon}</span>{label}
+            </button>
+          ))}
+        </div>
+
+        {/* 3D / 2D toggle */}
+        <div style={{
+          background:"rgba(6,0,16,0.84)",
+          backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
+          border:"1px solid rgba(200,140,255,0.22)",
+          borderRadius:10, padding:"4px 5px",
+          display:"flex", gap:3,
+          boxShadow:"0 4px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
+        }}>
+          {([
+            { v:true,  label:"3D", tip:"Tilted 3D view" },
+            { v:false, label:"2D", tip:"Flat top-down view" },
+          ] as const).map(({ v, label, tip }) => (
+            <button key={label} onClick={() => setIs3D(v)} title={tip}
+              style={{
+                background: is3D===v ? "rgba(78,0,142,0.55)" : "transparent",
+                border:     is3D===v ? "1px solid rgba(200,140,255,0.5)" : "1px solid transparent",
+                borderRadius:7,
+                color:      is3D===v ? "#ded0f5" : "rgba(255,255,255,0.5)",
+                cursor:"pointer", fontSize:12, fontWeight:800,
+                padding:"4px 14px",
+                transition:"all 0.15s",
+                letterSpacing:"0.06em",
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* ── Legend — bottom-right glassmorphism panel ─────────────── */}
       <div style={{
