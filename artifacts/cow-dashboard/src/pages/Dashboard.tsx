@@ -359,6 +359,7 @@ function TableShell({ title, accent, count, loading, cols, children, alert }: {
   title: string; accent: string; count: number; loading: boolean;
   cols: string[]; children: React.ReactNode; alert?: boolean;
 }) {
+  const isEmpty = !loading && count === 0;
   return (
     <div style={{ borderRadius: 14, overflow: "hidden", display: "flex", flexDirection: "column",
       background: "rgba(78,0,142,0.86)", backdropFilter: "blur(14px)",
@@ -382,7 +383,7 @@ function TableShell({ title, accent, count, loading, cols, children, alert }: {
           {loading ? "…" : `${count} active`}
         </span>
       </div>
-      <div style={{ overflowY: "auto", flex: 1 }}>
+      <div style={{ overflowY: "auto", flex: isEmpty ? "0 0 auto" : 1, minHeight: isEmpty ? 48 : 0 }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>{cols.map(h => <th key={h} style={TH_STYLE}>{h}</th>)}</tr>
@@ -479,14 +480,15 @@ function NsaTicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
 // ─── Power ticket table ────────────────────────────────────────────────────────
 function PowerTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading: boolean }) {
   const cols = ["Site","#Physical","District","Site label","Total Duration","Time to SLA Breach","Remaining SAL (Min)","Alarms Description","Comment"];
+  const empty = !loading && tickets.length === 0;
   return (
     <TableShell title="Running Power Outage Tickets" accent={P.red}
       count={tickets.length} loading={loading} cols={cols}
       alert={!loading && tickets.length > 0}>
       {loading
         ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: 12, padding: 14 }}>Loading…</td></tr>
-        : tickets.length === 0
-          ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 12, fontWeight: 600 }}>✓ No active power tickets</td></tr>
+        : empty
+          ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 8, fontWeight: 600 }}>✓ No active power tickets</td></tr>
           : tickets.map((t, i) => <PowerTicketRow key={`${t.id}-${i}`} ticket={t} idx={i} />)}
     </TableShell>
   );
@@ -495,14 +497,15 @@ function PowerTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading:
 // ─── NSA ticket table ──────────────────────────────────────────────────────────
 function NsaTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading: boolean }) {
   const cols = ["Site ID","Chain","District","Site Label","TT Severity","Total Duration","Time to SLA Breach","Remaining SAL (MIN)","Problem Description"];
+  const empty = !loading && tickets.length === 0;
   return (
     <TableShell title="Running NSA Tickets" accent={P.orange}
       count={tickets.length} loading={loading} cols={cols}
       alert={!loading && tickets.length > 0}>
       {loading
         ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: 12, padding: 14 }}>Loading…</td></tr>
-        : tickets.length === 0
-          ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 12, fontWeight: 600 }}>✓ No active NSA tickets</td></tr>
+        : empty
+          ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 8, fontWeight: 600 }}>✓ No active NSA tickets</td></tr>
           : tickets.map((t, i) => <NsaTicketRow key={`${t.id}-${i}`} ticket={t} idx={i} />)}
     </TableShell>
   );
