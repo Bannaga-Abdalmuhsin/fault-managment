@@ -166,6 +166,7 @@ function useRiskCards(): RiskCard[] {
 // ─── Live risk card component ─────────────────────────────────────────────────
 function RiskCardComp({ card }: { card: RiskCard }) {
   const [, setTick] = useState(0);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000);
     return () => clearInterval(id);
@@ -214,9 +215,9 @@ function RiskCardComp({ card }: { card: RiskCard }) {
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: accentColor, letterSpacing: "0.04em" }}>
+          <button type="button" onClick={() => setOpen(v => !v)} style={{ fontSize: 18, fontWeight: 800, color: accentColor, letterSpacing: "0.04em", background: "transparent", border: "none", padding: 0, cursor: "pointer" }}>
             {card.siteId}
-          </span>
+          </button>
           {/* Alarm type pill */}
           <span style={{
             fontSize: 9, fontWeight: 800, letterSpacing: "0.1em",
@@ -242,49 +243,52 @@ function RiskCardComp({ card }: { card: RiskCard }) {
         </span>
       </div>
 
-      {/* Info rows */}
-      <div style={{ fontSize: 14, lineHeight: 2.0 }}>
-        <Row label="Alarm"    value={card.alarmDescription || "—"} />
-        <Row label="Assigned" value={assignedLocal} />
-        <Row label="Power"    value={card.powerConfiguration || "—"} />
-        <Row label="ETA"      value={`${card.etaMinutes} min`} color="#38D4FF" />
-      </div>
+      {open && (
+        <>
+          {/* Info rows */}
+          <div style={{ fontSize: 14, lineHeight: 2.0 }}>
+            <Row label="Alarm"    value={card.alarmDescription || "—"} />
+            <Row label="Assigned" value={assignedLocal} />
+            <Row label="Power"    value={card.powerConfiguration || "—"} />
+            <Row label="ETA"      value={`${card.etaMinutes} min`} color="#38D4FF" />
+          </div>
 
-      {/* Timer boxes */}
-      <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}`, paddingTop: 8,
-        display: "flex", flexDirection: "column", gap: 6 }}>
-        {/* Battery backup countdown */}
-        <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "8px 10px" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-            color: "rgba(255,255,255,0.38)", marginBottom: 4 }}>
-            🔋 Battery Backup
-            {card.batteryBackupMinutes != null && (
-              <span style={{ marginLeft: 4, opacity: 0.6 }}>({fmtHrs(card.batteryBackupMinutes / 60)})</span>
+          {/* Timer boxes */}
+          <div style={{ marginTop: 8, borderTop: `1px solid ${borderColor}`, paddingTop: 8,
+            display: "flex", flexDirection: "column", gap: 6 }}>
+            {/* Battery backup countdown */}
+            <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "8px 10px" }}>
+              <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+                color: "rgba(255,255,255,0.38)", marginBottom: 4 }}>
+                🔋 Battery Backup
+                {card.batteryBackupMinutes != null && (
+                  <span style={{ marginLeft: 4, opacity: 0.6 }}>({fmtHrs(card.batteryBackupMinutes / 60)})</span>
+                )}
+              </div>
+              {battRemainS !== null ? (
+                <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "monospace", color: battColor }}>
+                  {fmtSec(battRemainS)}
+                </div>
+              ) : (
+                <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.3)", paddingTop: 2 }}>
+                  No data
+                </div>
+              )}
+            </div>
+            {/* ETA remaining */}
+            {etaRemainS !== null && (
+              <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "8px 10px" }}>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
+                  color: "rgba(255,255,255,0.38)", marginBottom: 4 }}>🚗 ETA</div>
+                <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "monospace",
+                  color: etaRemainS <= 0 ? P.red : "#38D4FF" }}>
+                  {fmtSec(etaRemainS)}
+                </div>
+              </div>
             )}
           </div>
-          {battRemainS !== null ? (
-            <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "monospace", color: battColor }}>
-              {fmtSec(battRemainS)}
-            </div>
-          ) : (
-            <div style={{ fontSize: 14, fontWeight: 600, color: "rgba(255,255,255,0.3)", paddingTop: 2 }}>
-              No data
-            </div>
-          )}
-        </div>
-
-        {/* ETA remaining */}
-        {etaRemainS !== null && (
-          <div style={{ flex: 1, background: "rgba(0,0,0,0.18)", borderRadius: 7, padding: "8px 10px" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-              color: "rgba(255,255,255,0.38)", marginBottom: 4 }}>🚗 ETA</div>
-            <div style={{ fontSize: 24, fontWeight: 900, fontFamily: "monospace",
-              color: etaRemainS <= 0 ? P.red : "#38D4FF" }}>
-              {fmtSec(etaRemainS)}
-            </div>
-          </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }
