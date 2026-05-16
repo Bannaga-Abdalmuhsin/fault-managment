@@ -198,8 +198,12 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
       if (!document.getElementById("gm-monochrome")) {
         const s = document.createElement("style");
         s.id = "gm-monochrome";
+        // Filter chain for monochrome-light + STC purple tint (#2d004d ≈ HSL 285°):
+        // grayscale → sepia (adds hue base) → hue-rotate to 285° → restore brightness → saturate
         s.textContent =
-          `.gm-style canvas,.gm-style img{filter:grayscale(1) brightness(1.08)!important}`;
+          `.gm-style canvas,.gm-style img{` +
+          `filter:grayscale(1) sepia(0.25) hue-rotate(245deg) brightness(1.18) saturate(2.5)!important` +
+          `}`;
         document.head.appendChild(s);
       }
     });

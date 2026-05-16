@@ -1,0 +1,14 @@
+{
+  "monochrome": true,
+  "variant": "light",
+  "styles": [
+    {
+      "id": "pointOfInterest",
+      "geometry": {
+        "visible": true,
+        "fillOpacity": 1,
+        "fillColor": "#2d004d"
+      }
+    }
+  ]
+}
