@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <filter id="shadow-up" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="rgba(0,0,0,0.5)"/>
+    </filter>
+    <filter id="glow-up" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="shadow-ellipse-up" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#000" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Ground shadow -->
+  <ellipse cx="38" cy="59" rx="16" ry="4" fill="url(#shadow-ellipse-up)"/>
+
+  <!-- Truck bed (isometric flat-bed) -->
+  <g filter="url(#shadow-up)">
+    <!-- Bed top face -->
+    <polygon points="14,47 46,47 54,41 22,41" fill="#E8E8E8"/>
+    <!-- Bed left face -->
+    <polygon points="14,47 22,41 22,50 14,56" fill="#C8C8C8"/>
+    <!-- Bed right face -->
+    <polygon points="46,47 54,41 54,50 46,56" fill="#BDBDBD"/>
+    <!-- Bed bottom face -->
+    <polygon points="14,56 22,50 54,50 46,56" fill="#D0D0D0"/>
+
+    <!-- Cab top -->
+    <polygon points="40,41 54,41 54,34 40,34" fill="#F0F0F0"/>
+    <!-- Cab left face -->
+    <polygon points="34,46 40,41 40,34 34,40" fill="#E0E0E0"/>
+    <!-- Cab front -->
+    <polygon points="40,34 54,34 52,32 38,32" fill="#FAFAFA"/>
+    <!-- Windscreen -->
+    <polygon points="43,33.5 51,33.5 52,32 42,32" fill="#90CAF9" opacity="0.85"/>
+  </g>
+
+  <!-- Tower legs (green) -->
+  <g filter="url(#glow-up)" opacity="0.95">
+    <!-- Left leg -->
+    <line x1="24" y1="41" x2="22" y2="10" stroke="#00C878" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- Right leg -->
+    <line x1="32" y1="41" x2="30" y2="10" stroke="#00C878" stroke-width="1.8" stroke-linecap="round"/>
+    <!-- Cross braces -->
+    <line x1="24" y1="41" x2="30" y2="28" stroke="#00C878" stroke-width="1.2" opacity="0.8"/>
+    <line x1="32" y1="41" x2="22" y2="28" stroke="#00C878" stroke-width="1.2" opacity="0.8"/>
+    <line x1="23" y1="28" x2="29" y2="18" stroke="#00C878" stroke-width="1.2" opacity="0.8"/>
+    <line x1="30" y1="28" x2="22" y2="18" stroke="#00C878" stroke-width="1.2" opacity="0.8"/>
+    <!-- Center pole -->
+    <line x1="28" y1="41" x2="26" y2="6" stroke="#00C878" stroke-width="1" opacity="0.6"/>
+
+    <!-- Antenna panel (left) -->
+    <rect x="19" y="7" width="3.5" height="10" rx="0.5" fill="#E0E0E0" stroke="#00C878" stroke-width="0.8"/>
+    <!-- Antenna panel (right) -->
+    <rect x="31" y="7" width="3.5" height="10" rx="0.5" fill="#E0E0E0" stroke="#00C878" stroke-width="0.8"/>
+    <!-- Top crossbar -->
+    <line x1="20" y1="7" x2="34" y2="7" stroke="#00C878" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Equipment box -->
+    <rect x="24" y="9" width="6" height="5" rx="0.8" fill="#D8D8D8" stroke="#00C878" stroke-width="0.7"/>
+  </g>
+
+  <!-- Glow halo around tower top -->
+  <ellipse cx="27" cy="10" rx="9" ry="5" fill="#00C878" opacity="0.15"/>
+</svg>
