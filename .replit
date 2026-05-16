@@ -46,3 +46,8 @@ externalPort = 3000
 [nix]
 channel = "stable-25_05"
 packages = ["nano", "powershell"]
+
+[userenv]
+
+[userenv.shared]
+VITE_GOOGLE_MAPS_API_KEY = "AIzaSyC9i0wZMYwUly6ef4eZB2qnGgUYz3Vqxcc"

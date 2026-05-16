@@ -1,13 +1,9 @@
-import { useEffect, useRef, useState } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+/// <reference types="@types/google.maps" />
+import { useEffect, useRef } from "react";
+import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 
-const STC_GREEN  = "#00C878";   // operational — no tickets
-const STC_YELLOW = "#F59E0B";   // has open NSA / telecom ticket
-const STC_RED    = "#EF4444";   // has open power outage ticket
-const SITE_ICON_GREEN = "/site-up.svg";
-const SITE_ICON_YELLOW = "/site-alarm.svg";
-const SITE_ICON_RED = "/site-down.svg";
+const GMAPS_KEY = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) ?? "";
+setOptions({ key: GMAPS_KEY, v: "weekly" });
 
 export interface MapSite {
   id: number;
@@ -25,296 +21,140 @@ interface Map3DProps {
   areaFilter: string;
 }
 
-// Center/zoom per area
-const AREA_VIEWS: Record<string, { center: [number, number]; zoom: number }> = {
-  All:             { center: [21.38,  39.93],  zoom: 10.5 },
-  Arafat:          { center: [21.357, 39.972], zoom: 12.8 },
-  Mina:            { center: [21.412, 39.898], zoom: 13   },
-  Muzdalifah:      { center: [21.384, 39.912], zoom: 12.8 },
-  "Makka Remote":  { center: [21.42,  39.93],  zoom: 9    },
+const AREA_VIEWS: Record<string, { lat: number; lng: number; zoom: number }> = {
+  All:            { lat: 21.38,  lng: 39.93,  zoom: 11  },
+  Arafat:         { lat: 21.357, lng: 39.972, zoom: 13  },
+  Mina:           { lat: 21.412, lng: 39.898, zoom: 13  },
+  Muzdalifah:     { lat: 21.384, lng: 39.912, zoom: 13  },
+  "Makka Remote": { lat: 21.42,  lng: 39.93,  zoom: 10  },
 };
 
-// Detect WebGL support
-function hasWebGL(): boolean {
-  try {
-    const canvas = document.createElement("canvas");
-    return !!(
-      canvas.getContext("webgl") || canvas.getContext("experimental-webgl")
-    );
-  } catch {
-    return false;
-  }
-}
+const BASE     = (import.meta.env.BASE_URL as string) ?? "/";
+const ICON_RED    = `${BASE}site-down.svg`;
+const ICON_YELLOW = `${BASE}site-alarm.svg`;
+const ICON_GREEN  = `${BASE}site-up.svg`;
 
-// ── MapLibre 3D (WebGL available) ─────────────────────────────────────────
-function MapLibre3D({ sites, areaFilter }: Map3DProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
-  const [ready, setReady] = useState(false);
+const STC_GREEN  = "#00C878";
+const STC_YELLOW = "#F59E0B";
+const STC_RED    = "#EF4444";
 
+export default function Map3D({ sites, areaFilter }: Map3DProps) {
+  const containerRef  = useRef<HTMLDivElement>(null);
+  const mapRef        = useRef<google.maps.Map | null>(null);
+  const markersRef    = useRef<google.maps.Marker[]>([]);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const sitesRef      = useRef(sites);
+  sitesRef.current    = sites;
+
+  // ── Mount ─────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
+    const view = AREA_VIEWS[areaFilter] ?? AREA_VIEWS.All;
 
-    import("maplibre-gl").then(({ default: maplibregl }) => {
-      import("maplibre-gl/dist/maplibre-gl.css");
+    importLibrary("maps").then((lib) => {
+      const { Map, InfoWindow } = lib as google.maps.MapsLibrary;
+      if (!containerRef.current) return;
 
-      const view = AREA_VIEWS[areaFilter] ?? AREA_VIEWS["All"];
-
-      const map = new maplibregl.Map({
-        container: containerRef.current!,
-        style: {
-          version: 8,
-          sources: {
-            satellite: {
-              type: "raster",
-              tiles: [
-                "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-              ],
-              tileSize: 256,
-              attribution: "© Esri",
-              maxzoom: 19,
-            },
-            labels: {
-              type: "raster",
-              tiles: [
-                "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-              ],
-              tileSize: 256,
-              attribution: "",
-              maxzoom: 19,
-            },
-            terrain: {
-              type: "raster-dem",
-              tiles: [
-                "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png",
-              ],
-              encoding: "terrarium",
-              tileSize: 256,
-              maxzoom: 14,
-            },
-          },
-          layers: [
-            { id: "satellite", type: "raster", source: "satellite" },
-            {
-              id: "labels",
-              type: "raster",
-              source: "labels",
-              paint: { "raster-opacity": 0.65 },
-            },
-          ],
-          terrain: { source: "terrain", exaggeration: 2.2 },
-          sky: {
-            "sky-color": "#1a3a5c",
-            "sky-horizon-blend": 0.4,
-            "horizon-color": "#6ca8d4",
-            "horizon-fog-blend": 0.3,
-            "fog-color": "#d8e8f0",
-            "fog-ground-blend": 0.9,
-          },
-        } as any,
-        center: [view.center[1], view.center[0]],
-        zoom: view.zoom,
-        pitch: 52,
-        bearing: -10,
-        antialias: true,
+      const map = new Map(containerRef.current, {
+        mapTypeId:         "hybrid" as google.maps.MapTypeId,
+        center:            { lat: view.lat, lng: view.lng },
+        zoom:              view.zoom,
+        tilt:              45,
+        zoomControl:       true,
+        mapTypeControl:    false,
+        streetViewControl: false,
+        fullscreenControl: false,
+        rotateControl:     true,
+        gestureHandling:   "greedy",
+        styles: [
+          { featureType: "all", elementType: "labels.text.fill",   stylers: [{ color: "#ffffff" }] },
+          { featureType: "all", elementType: "labels.text.stroke",  stylers: [{ color: "#000000" }, { weight: 2 }] },
+        ],
       });
 
-      map.addControl(
-        new maplibregl.NavigationControl({ visualizePitch: true }),
-        "top-right"
-      );
-
-      mapRef.current = map;
-
-      map.on("load", () => {
-        setReady(true);
-        // Add site markers
-        addMarkers(sites, map, maplibregl, markersRef);
-      });
+      mapRef.current        = map;
+      infoWindowRef.current = new InfoWindow();
+      placeMarkers(sitesRef.current, map);
     });
 
     return () => {
-      markersRef.current.forEach((m) => m.remove());
-      markersRef.current = [];
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      clearMarkers();
+      infoWindowRef.current?.close();
+      infoWindowRef.current = null;
+      mapRef.current        = null;
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fly on area change
-  useEffect(() => {
-    if (!mapRef.current || !ready) return;
-    const view = AREA_VIEWS[areaFilter] ?? AREA_VIEWS["All"];
-    mapRef.current.flyTo({
-      center: [view.center[1], view.center[0]],
-      zoom: view.zoom,
-      pitch: 52,
-      bearing: -10,
-      duration: 1800,
-    });
-  }, [areaFilter, ready]);
-
-  // Update markers
-  useEffect(() => {
-    if (!mapRef.current || !ready) return;
-    import("maplibre-gl").then(({ default: maplibregl }) => {
-      addMarkers(sites, mapRef.current, maplibregl, markersRef);
-    });
-  }, [sites, ready]);
-
-  return (
-    <div ref={containerRef} style={{ width: "100%", height: "100%" }} />
-  );
-}
-
-function addMarkers(sites: MapSite[], map: any, maplibregl: any, markersRef: any) {
-  markersRef.current.forEach((m: any) => m.remove());
-  markersRef.current = [];
-
-  sites
-    .filter((s) => s.latitude != null && s.longitude != null)
-    .forEach((site) => {
-      const color = site.hasPowerTicket
-        ? STC_RED
-        : site.hasNsaTicket
-        ? STC_YELLOW
-        : STC_GREEN;
-
-      // Outer wrapper: fixed 28×28 transparent hit-area — never resizes so the
-      // cursor can't escape it and trigger the mouseenter/leave flicker loop.
-      const el = document.createElement("div");
-      el.style.cssText = `
-        width:28px;height:28px;display:flex;align-items:center;justify-content:center;
-        cursor:pointer;position:relative;
-      `;
-
-      // Inner visual dot — this is what actually scales on hover.
-      const dot = document.createElement("div");
-      dot.style.cssText = `
-        width:12px;height:12px;border-radius:50%;
-        background:${color};border:2px solid white;
-        box-shadow:0 1px 5px rgba(0,0,0,0.6);
-        transition:transform 0.15s ease;pointer-events:none;
-      `;
-      el.appendChild(dot);
-
-      el.addEventListener("mouseenter", () => { dot.style.transform = "scale(1.7)"; });
-      el.addEventListener("mouseleave", () => { dot.style.transform = "scale(1)"; });
-
-      const popup = new maplibregl.Popup({ offset: 10, closeButton: false }).setHTML(
-        `<div style="font-size:11px;font-family:system-ui"><strong>${site.name}</strong><br/>Zone: ${site.zone}<br/>Status: <span style="color:${color};font-weight:700">${site.hasPowerTicket ? "DOWN" : "UP"}</span></div>`
-      );
-
-      const marker = new maplibregl.Marker({ element: el })
-        .setLngLat([site.longitude!, site.latitude!])
-        .setPopup(popup)
-        .addTo(map);
-
-      markersRef.current.push(marker);
-    });
-}
-
-// ── Leaflet fallback (no WebGL) ────────────────────────────────────────────
-function LeafletMap({ sites, areaFilter }: Map3DProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Marker[]>([]);
-
-  useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-    const view = AREA_VIEWS[areaFilter] ?? AREA_VIEWS["All"];
-
-    const map = L.map(containerRef.current, {
-      center: view.center,
-      zoom: view.zoom,
-      zoomControl: true,
-    });
-
-    L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      { attribution: "Esri World Imagery", maxZoom: 19 }
-    ).addTo(map);
-
-    L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-      { attribution: "", maxZoom: 19, opacity: 0.6 }
-    ).addTo(map);
-
-    mapRef.current = map;
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
-  }, []);
-
+  // ── Pan when area filter changes ──────────────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    if (areaFilter === "All" && sites.length > 0) {
-      const validSites = sites.filter(s => s.latitude != null && s.longitude != null);
-      if (validSites.length > 0) {
-        const bounds = L.latLngBounds(validSites.map(s => [s.latitude!, s.longitude!]));
-        map.flyToBounds(bounds, { padding: [40, 40], duration: 1.5, maxZoom: 13 });
-      }
-    } else {
-      const view = AREA_VIEWS[areaFilter] ?? AREA_VIEWS["All"];
-      map.flyTo(view.center, view.zoom, { duration: 1.5 });
-    }
-  }, [areaFilter, sites]);
+    const view = AREA_VIEWS[areaFilter] ?? AREA_VIEWS.All;
+    map.panTo({ lat: view.lat, lng: view.lng });
+    map.setZoom(view.zoom);
+  }, [areaFilter]);
 
+  // ── Refresh markers when site data updates ────────────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current = [];
-
-    sites
-      .filter((s) => s.latitude != null && s.longitude != null)
-      .forEach((site) => {
-        const color = site.hasPowerTicket
-          ? STC_RED
-          : site.hasNsaTicket
-          ? STC_YELLOW
-          : STC_GREEN;
-      const iconUrl = site.hasPowerTicket
-        ? SITE_ICON_RED
-        : site.hasNsaTicket
-        ? SITE_ICON_YELLOW
-        : SITE_ICON_GREEN;
-
-        const icon = L.divIcon({
-          className: "",
-        html: `<div style="width:28px;height:28px;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.45));">
-          <img src="${iconUrl}" alt="" style="width:28px;height:28px;display:block" />
-        </div>`,
-          iconSize: [28, 28],
-          iconAnchor: [14, 22],
-          tooltipAnchor: [0, -16],
-        });
-
-        const marker = L.marker([site.latitude!, site.longitude!], { icon });
-
-        marker.bindTooltip(
-          `<strong>${site.name}</strong><br/>Zone: ${site.zone}<br/>Status: <span style="color:${color};font-weight:700">${site.hasPowerTicket ? "DOWN" : "UP"}</span>`,
-          { direction: "top", offset: [0, -4] }
-        );
-
-        marker.addTo(map);
-        markersRef.current.push(marker as any);
-      });
+    placeMarkers(sites, map);
   }, [sites]);
 
-  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
-}
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function clearMarkers() {
+    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current = [];
+  }
 
-// ── Exported component ─────────────────────────────────────────────────────
-// Leaflet is used for all cases: it accurately positions markers at every zoom
-// level. The MapLibre 3D path is kept in the file but not wired up, as its
-// 52° pitch + terrain exaggeration distorts HTML marker positions when zoomed
-// out to global scale.
-export default function Map3D(props: Map3DProps) {
-  return <LeafletMap {...props} />;
+  function placeMarkers(list: MapSite[], map: google.maps.Map) {
+    clearMarkers();
+
+    list
+      .filter(s => s.latitude != null && s.longitude != null)
+      .forEach(site => {
+        const isPower     = !!site.hasPowerTicket;
+        const isNsa       = !!site.hasNsaTicket;
+        const color       = isPower ? STC_RED : isNsa ? STC_YELLOW : STC_GREEN;
+        const iconUrl     = isPower ? ICON_RED : isNsa ? ICON_YELLOW : ICON_GREEN;
+        const statusLabel = isPower ? "DOWN — Power"
+                          : isNsa   ? "ALARM — NSA"
+                          :           "UP — Operational";
+
+        const marker = new google.maps.Marker({
+          position: { lat: site.latitude!, lng: site.longitude! },
+          map,
+          title: site.name,
+          icon: {
+            url:        iconUrl,
+            scaledSize: new google.maps.Size(28, 28),
+            anchor:     new google.maps.Point(14, 22),
+          },
+        });
+
+        marker.addListener("click", () => {
+          infoWindowRef.current?.setContent(
+            `<div style="font-family:system-ui,sans-serif;font-size:12px;min-width:160px;padding:6px 4px;line-height:1.6">
+              <div style="font-weight:700;font-size:13px;margin-bottom:4px;color:#1a1a1a">${site.name}</div>
+              <div style="color:#555;margin-bottom:2px">Zone: <strong>${site.zone}</strong></div>
+              <div>Status: <span style="color:${color};font-weight:700">${statusLabel}</span></div>
+            </div>`
+          );
+          infoWindowRef.current?.open(map, marker);
+        });
+
+        markersRef.current.push(marker);
+      });
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
+  if (!GMAPS_KEY) {
+    return (
+      <div style={{ width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", background:"#0a0a1a", color:"#aaa", fontSize:13 }}>
+        VITE_GOOGLE_MAPS_API_KEY not configured
+      </div>
+    );
+  }
+
+  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }
