@@ -215,7 +215,7 @@ function RiskCardComp({ card }: { card: RiskCard }) {
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <button type="button" onClick={() => setOpen(v => !v)} style={{ fontSize: 16, fontWeight: 800, color: accentColor, letterSpacing: "0.04em", background: "transparent", border: "none", padding: 0, cursor: "pointer" }}>
+          <button type="button" onClick={() => setOpen(v => !v)} style={{ fontSize: 14, fontWeight: 800, color: accentColor, letterSpacing: "0.04em", background: "transparent", border: "none", padding: 0, cursor: "pointer" }}>
             {card.siteId}
           </button>
           {/* Alarm type pill */}
