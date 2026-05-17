@@ -1,6 +1,7 @@
 /// <reference types="@types/google.maps" />
 import { useEffect, useRef, useState, useCallback } from "react";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
+import cowTowerUrl from "../assets/cow-tower.png";
 
 // Support GOOGLE_MAPS_API_KEY (via vite.config envPrefix) or VITE_GOOGLE_MAPS_API_KEY
 const GMAPS_KEY = (
@@ -74,29 +75,52 @@ const COL = {
 };
 
 // ── Build an AdvancedMarkerElement pin as a DOM element ───────────────────────
-function buildPinElement(c: typeof COL.green, bounce: boolean): HTMLElement {
-  const size   = bounce ? 22 : 18;
-  const wrap   = document.createElement("div");
+function buildPinElement(c: typeof COL.green, pulse: boolean): HTMLElement {
+  // Outer wrapper — flex column, tower + status dot
+  const wrap = document.createElement("div");
   wrap.style.cssText = `
-    width:${size}px; height:${size}px; border-radius:50%; position:relative; cursor:pointer;
-    background: radial-gradient(circle at 38% 35%, ${c.glow}, ${c.fill});
-    box-shadow: 0 0 10px 3px ${c.glow}88, 0 0 3px 1px ${c.fill};
-    border: 2px solid rgba(255,255,255,0.82);
+    display:flex; flex-direction:column; align-items:center; gap:0;
+    cursor:pointer; position:relative;
   `;
-  if (bounce) {
-    const ring = document.createElement("div");
-    ring.style.cssText = `
-      position:absolute; inset:-8px; border-radius:50%;
-      border:2px solid ${c.fill}; pointer-events:none;
-      animation: mapPinPulse 1.3s ease-out infinite;
-    `;
-    wrap.appendChild(ring);
-    // second ring with delay
-    const ring2 = document.createElement("div");
-    ring2.style.cssText = ring.style.cssText;
-    ring2.style.animationDelay = "0.65s";
-    wrap.appendChild(ring2);
+
+  // Tower image with colored drop-shadow matching status
+  const img = document.createElement("img");
+  img.src = cowTowerUrl;
+  img.style.cssText = `
+    width:48px; height:auto; display:block; pointer-events:none;
+    filter: drop-shadow(0 0 6px ${c.fill}) drop-shadow(0 2px 3px rgba(0,0,0,0.6));
+  `;
+  wrap.appendChild(img);
+
+  // Status dot at the base
+  const dotWrap = document.createElement("div");
+  dotWrap.style.cssText = `position:relative; width:14px; height:14px; margin-top:-4px;`;
+
+  const dot = document.createElement("div");
+  dot.style.cssText = `
+    width:14px; height:14px; border-radius:50%;
+    background: radial-gradient(circle at 38% 35%, ${c.glow}, ${c.fill});
+    box-shadow: 0 0 8px 3px ${c.glow}99, 0 0 2px 1px ${c.fill};
+    border: 2px solid rgba(255,255,255,0.85);
+    position:relative; z-index:1;
+  `;
+  dotWrap.appendChild(dot);
+
+  // Pulse rings for DOWN (red) sites
+  if (pulse) {
+    for (const delay of ["0s", "0.65s"]) {
+      const ring = document.createElement("div");
+      ring.style.cssText = `
+        position:absolute; inset:-7px; border-radius:50%;
+        border:2px solid ${c.fill}; pointer-events:none;
+        animation: mapPinPulse 1.3s ease-out infinite;
+        animation-delay:${delay};
+      `;
+      dotWrap.appendChild(ring);
+    }
   }
+
+  wrap.appendChild(dotWrap);
   return wrap;
 }
 
