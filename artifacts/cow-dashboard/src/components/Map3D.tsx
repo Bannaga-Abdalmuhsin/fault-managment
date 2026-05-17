@@ -87,7 +87,7 @@ function buildPinElement(c: typeof COL.green, pulse: boolean): HTMLElement {
   const img = document.createElement("img");
   img.src = cowTowerUrl;
   img.style.cssText = `
-    width:48px; height:auto; display:block; pointer-events:none;
+    width:36px; height:auto; display:block; pointer-events:none;
     filter: drop-shadow(0 0 6px ${c.fill}) drop-shadow(0 2px 3px rgba(0,0,0,0.6));
   `;
   wrap.appendChild(img);
