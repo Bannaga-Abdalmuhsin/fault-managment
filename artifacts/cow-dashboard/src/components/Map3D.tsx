@@ -223,13 +223,7 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
     const map = mapRef.current;
     if (!map) return;
     const v = AREA_VIEWS[areaFilter] ?? AREA_VIEWS.All;
-    if (is3D) {
-      map.setTilt(v.tilt);
-      map.setHeading(v.heading);
-    } else {
-      map.setTilt(0);
-      map.setHeading(0);
-    }
+    map.moveCamera({ tilt: is3D ? v.tilt : 0, heading: is3D ? v.heading : 0 });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [is3D]);
 
