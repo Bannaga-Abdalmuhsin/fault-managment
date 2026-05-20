@@ -1,0 +1,564 @@
+Here is the complete FaultManagement.tsx — all 629 lines — ready to drop into any project:
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  GoogleMap,
+  OverlayView,
+  Polyline,
+} from "@react-google-maps/api";
+import { useGoogleMaps } from "../lib/GoogleMapsProvider";
+/* ─── types ────────────────────────────────────────────────────────────────── */
+export interface ActiveFault {
+  id: number;
+  ttId: string;
+  cowId: string;
+  alarmName: string;
+  severity: string;
+  powerSource: string | null;
+  backupTime: string | null;
+  siteLat: number;
+  siteLng: number;
+  location: string | null;
+  dispatchStatus: string;
+  eta: number | null;
+  roadEta: number | null;
+  distanceKm: number | null;
+  routePolyline: { lat: number; lng: number }[] | null;
+  receivedAt: string;
+  dispatchedAt: string | null;
+  assignedTechId: number | null;
+  assignedTech: string | null;
+  techLat: number | null;
+  techLng: number | null;
+  techArea: string | null;
+}
+/* ─── helpers ──────────────────────────────────────────────────────────────── */
+const MAKKAH = { lat: 21.38, lng: 39.93 };
+const STATUS_LABELS: Record<string, string> = {
+  new:      "New Fault",
+  assigned: "Team Assigned",
+  en_route: "En Route",
+  on_site:  "On Site",
+  resolved: "Resolved",
+  closed:   "Closed",
+};
+const STATUS_COLORS: Record<string, string> = {
+  new:      "#dc2626",
+  assigned: "#f59e0b",
+  en_route: "#3b82f6",
+  on_site:  "#8b5cf6",
+  resolved: "#16a34a",
+  closed:   "#6b7280",
+};
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: "#dc2626",
+  major:    "#f59e0b",
+  minor:    "#3b82f6",
+  warning:  "#a3a3a3",
+};
+function minutesAgo(iso: string) {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+}
+function severityColor(s: string) {
+  return SEVERITY_COLORS[s.toLowerCase()] ?? "#a3a3a3";
+}
+/* ─── map sub-component ────────────────────────────────────────────────────── */
+function FaultMap({
+  faults,
+  selected,
+  onSelect,
+}: {
+  faults: ActiveFault[];
+  selected: ActiveFault | null;
+  onSelect: (f: ActiveFault) => void;
+}) {
+  const { isLoaded, loadError } = useGoogleMaps();
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const onLoad = useCallback((m: google.maps.Map) => { mapRef.current = m; }, []);
+  const onUnmount = useCallback(() => { mapRef.current = null; }, []);
+  if (loadError) return (
+    <div className="flex-1 flex items-center justify-center text-red-400 text-sm">
+      Google Maps failed to load
+    </div>
+  );
+  if (!isLoaded) return (
+    <div className="flex-1 flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  return (
+    <GoogleMap
+      mapContainerStyle={{ width: "100%", height: "100%", borderRadius: 12 }}
+      center={MAKKAH}
+      zoom={11}
+      options={{
+        mapTypeId: "satellite",
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        fullscreenControl: true,
+        streetViewControl: false,
+        tilt: 0,
+        styles: [
+          { featureType: "all", elementType: "labels.text.fill",   stylers: [{ color: "#ffffff" }] },
+          { featureType: "all", elementType: "labels.text.stroke", stylers: [{ color: "#000000" }, { weight: 2 }] },
+        ],
+      }}
+      onLoad={onLoad}
+      onUnmount={onUnmount}
+    >
+      {/* COW site markers */}
+      {faults.map(f => {
+        const isSelected = selected?.id === f.id;
+        const sColor = severityColor(f.severity);
+        const isCritical = f.severity.toLowerCase() === "critical";
+        return (
+          <OverlayView
+            key={f.id}
+            position={{ lat: f.siteLat, lng: f.siteLng }}
+            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+          >
+            <div
+              onClick={() => onSelect(f)}
+              style={{ transform: "translate(-50%,-100%)", cursor: "pointer" }}
+            >
+              <div style={{
+                background: isSelected ? "#fff" : sColor,
+                color: isSelected ? sColor : "#fff",
+                border: `2px solid ${sColor}`,
+                borderRadius: 8,
+                padding: "3px 7px",
+                fontSize: 10,
+                fontWeight: 800,
+                whiteSpace: "nowrap",
+                boxShadow: isCritical ? `0 0 12px ${sColor}` : `0 2px 8px rgba(0,0,0,0.5)`,
+                animation: isCritical && !isSelected ? "pulse 1.5s infinite" : "none",
+                position: "relative",
+                minWidth: 56,
+                textAlign: "center",
+              }}>
+                <div>{f.cowId}</div>
+                <div style={{ fontSize: 8.5, opacity: 0.9 }}>{f.alarmName.slice(0, 18)}</div>
+                <div style={{
+                  position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)",
+                  width: 0, height: 0,
+                  borderLeft: "5px solid transparent",
+                  borderRight: "5px solid transparent",
+                  borderTop: `6px solid ${isSelected ? "#fff" : sColor}`,
+                }} />
+              </div>
+            </div>
+          </OverlayView>
+        );
+      })}
+      {/* Technician markers */}
+      {faults.map(f => {
+        if (!f.techLat || !f.techLng) return null;
+        const isSelected = selected?.id === f.id;
+        const etaMins = f.roadEta ?? f.eta ?? null;
+        const dist    = f.distanceKm ?? null;
+        return (
+          <OverlayView
+            key={`tech-${f.id}`}
+            position={{ lat: f.techLat, lng: f.techLng }}
+            mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+          >
+            <div
+              style={{ transform: "translate(-50%,-100%)", cursor: "pointer" }}
+              onClick={() => onSelect(f)}
+            >
+              <div style={{
+                background: "#1e3a8a",
+                color: "#fff",
+                border: "2px solid #60a5fa",
+                borderRadius: 8,
+                padding: "3px 7px",
+                fontSize: 9.5,
+                fontWeight: 800,
+                whiteSpace: "nowrap",
+                boxShadow: isSelected ? "0 0 14px #3b82f6" : "0 2px 8px rgba(0,0,0,0.5)",
+                position: "relative",
+                textAlign: "center",
+              }}>
+                <div>👷 {f.assignedTech ?? "Tech"}</div>
+                <div style={{ fontSize: 8.5, opacity: 0.85 }}>
+                  {etaMins != null ? `ETA ${etaMins}min` : "—"}
+                  {dist != null ? ` · ${dist}km` : ""}
+                  {f.routePolyline ? " 🛣️" : ""}
+                </div>
+                <div style={{
+                  position: "absolute", bottom: -6, left: "50%", transform: "translateX(-50%)",
+                  width: 0, height: 0,
+                  borderLeft: "5px solid transparent",
+                  borderRight: "5px solid transparent",
+                  borderTop: "6px solid #1e3a8a",
+                }} />
+              </div>
+            </div>
+          </OverlayView>
+        );
+      })}
+      {/* Road routes */}
+      {faults.filter(f => f.techLat && f.techLng).map(f => {
+        const isSelected = selected?.id === f.id;
+        const path = f.routePolyline && f.routePolyline.length > 1
+          ? f.routePolyline
+          : [
+              { lat: f.techLat!, lng: f.techLng! },
+              { lat: f.siteLat,  lng: f.siteLng  },
+            ];
+        const hasRealRoute = !!(f.routePolyline && f.routePolyline.length > 1);
+        return (
+          <Polyline
+            key={`route-${f.id}`}
+            path={path}
+            options={{
+              strokeColor:   isSelected ? "#60a5fa" : (hasRealRoute ? "#38bdf8" : "#3b82f6"),
+              strokeOpacity: isSelected ? 1 : 0.7,
+              strokeWeight:  isSelected ? 5 : 3,
+              geodesic:      !hasRealRoute,
+              icons: hasRealRoute ? [{
+                icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 },
+                offset: "0",
+                repeat: "16px",
+              }] : undefined,
+            }}
+          />
+        );
+      })}
+    </GoogleMap>
+  );
+}
+/* ─── PBI sync status type ─────────────────────────────────────────────────── */
+interface PbiStatus {
+  ok:         boolean;
+  syncedAt:   string | null;
+  pbiCount:   number;
+  powerCount: number;
+  sirCount:   number;
+  upserted:   number;
+  closed:     number;
+  errors:     string[];
+}
+/* ─── main component ───────────────────────────────────────────────────────── */
+export function FaultManagement() {
+  const [faults, setFaults]       = useState<ActiveFault[]>([]);
+  const [selected, setSelected]   = useState<ActiveFault | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [statusFilter, setStatusFilter] = useState<string>("active");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [pbiStatus, setPbiStatus]   = useState<PbiStatus | null>(null);
+  const [pbiSyncing, setPbiSyncing] = useState(false);
+  const fetchFaults = useCallback(async () => {
+    try {
+      const r = await fetch("/api/faults/active");
+      if (!r.ok) return;
+      const data: ActiveFault[] = await r.json();
+      setFaults(data);
+      setLastRefresh(new Date());
+      if (selected) {
+        const fresh = data.find(f => f.id === selected.id);
+        if (fresh) setSelected(fresh);
+      }
+    } catch {
+    } finally {
+      setLoading(false);
+    }
+  }, [selected]);
+  useEffect(() => {
+    fetchFaults();
+    pollRef.current = setInterval(fetchFaults, 8000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, [fetchFaults]);
+  const fetchPbiStatus = useCallback(async () => {
+    try {
+      const r = await fetch("/api/faults/pbi-status");
+      if (!r.ok) return;
+      const data: PbiStatus = await r.json();
+      setPbiStatus(data);
+    } catch {}
+  }, []);
+  useEffect(() => {
+    fetchPbiStatus();
+    const t = setInterval(fetchPbiStatus, 30_000);
+    return () => clearInterval(t);
+  }, [fetchPbiStatus]);
+  const handlePbiSync = async () => {
+    setPbiSyncing(true);
+    try {
+      const r = await fetch("/api/faults/pbi-sync", { method: "POST" });
+      const data: PbiStatus = await r.json();
+      setPbiStatus(data);
+      await fetchFaults();
+    } catch {
+    } finally {
+      setPbiSyncing(false);
+    }
+  };
+  const filtered = faults.filter(f => {
+    if (statusFilter === "active") return !["resolved","closed"].includes(f.dispatchStatus);
+    if (statusFilter === "all") return true;
+    return f.dispatchStatus === statusFilter;
+  });
+  async function handleDispatch(faultId: number) {
+    await fetch(`/api/faults/${faultId}/dispatch`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    fetchFaults();
+  }
+  async function handleStatusChange(faultId: number, status: string) {
+    await fetch(`/api/faults/${faultId}/status`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
+    fetchFaults();
+  }
+  const criticalCount = faults.filter(f => f.severity.toLowerCase() === "critical" && !["resolved","closed"].includes(f.dispatchStatus)).length;
+  const activeCount   = faults.filter(f => !["resolved","closed"].includes(f.dispatchStatus)).length;
+  const enRouteCount  = faults.filter(f => f.dispatchStatus === "en_route").length;
+  const resolvedCount = faults.filter(f => f.dispatchStatus === "resolved").length;
+  return (
+    <div className="flex flex-col gap-3" style={{ height: "calc(100vh - 148px)" }}>
+      {/* ── Power BI sync bar ─────────────────────────────────────────────── */}
+      <div
+        className="flex items-center gap-2 flex-wrap rounded-lg px-3 py-1.5 shrink-0"
+        style={{
+          background:  pbiStatus?.ok === false ? "rgba(220,38,38,0.08)" : "rgba(30,58,138,0.12)",
+          border:      `1px solid ${pbiStatus?.ok === false ? "#dc262644" : "#1e3a8a55"}`,
+          fontSize:    11,
+        }}
+      >
+        <span style={{ color: "#facc15", fontWeight: 800, letterSpacing: 1 }}>⚡ Power BI</span>
+        <span style={{ color: "#94a3b8" }}>|</span>
+        {pbiStatus ? (
+          <>
+            <span
+              className={pbiStatus.ok ? "animate-pulse" : ""}
+              style={{ width: 7, height: 7, borderRadius: "50%", display: "inline-block", background: pbiStatus.ok ? "#22c55e" : "#f59e0b" }}
+            />
+            <span style={{ color: pbiStatus.ok ? "#86efac" : "#fcd34d", fontWeight: 600 }}>
+              {pbiStatus.ok ? "Synced" : "Sync error"}
+            </span>
+            {(pbiStatus.powerCount > 0 || pbiStatus.sirCount > 0) && (
+              <span style={{ color: "#60a5fa" }}>⚡ {pbiStatus.powerCount ?? 0} power · 📡 {pbiStatus.sirCount ?? 0} telecom</span>
+            )}
+            {pbiStatus.pbiCount > 0 && (
+              <span style={{ color: "#a78bfa" }}>({pbiStatus.pbiCount} matched sites)</span>
+            )}
+            {pbiStatus.upserted > 0 && <span style={{ color: "#34d399" }}>+{pbiStatus.upserted} inserted</span>}
+            {pbiStatus.closed > 0   && <span style={{ color: "#f87171" }}>{pbiStatus.closed} auto-closed</span>}
+            {pbiStatus.syncedAt && (
+              <span style={{ color: "#64748b" }}>· {new Date(pbiStatus.syncedAt).toLocaleTimeString()}</span>
+            )}
+            {pbiStatus.errors.length > 0 && (
+              <span style={{ color: "#fca5a5", maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                title={pbiStatus.errors.join(" | ")}>
+                ⚠ {pbiStatus.errors[0]}
+              </span>
+            )}
+          </>
+        ) : (
+          <span style={{ color: "#64748b" }}>Waiting for first sync…</span>
+        )}
+        <button
+          onClick={handlePbiSync}
+          disabled={pbiSyncing}
+          className="ml-auto"
+          style={{
+            background:   pbiSyncing ? "rgba(30,58,138,0.3)" : "rgba(30,58,138,0.5)",
+            color:        "#93c5fd",
+            border:       "1px solid #1e3a8a99",
+            borderRadius: 6,
+            padding:      "2px 9px",
+            fontSize:     10,
+            fontWeight:   700,
+            cursor:       pbiSyncing ? "not-allowed" : "pointer",
+            opacity:      pbiSyncing ? 0.7 : 1,
+          }}
+        >
+          {pbiSyncing ? "Syncing…" : "Sync Now"}
+        </button>
+      </div>
+      {/* ── Status bar ────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-3 shrink-0 flex-wrap">
+        <div className="flex gap-2">
+          {[
+            { label: "Active",   value: activeCount,   color: "#f59e0b" },
+            { label: "Critical", value: criticalCount, color: "#dc2626" },
+            { label: "En Route", value: enRouteCount,  color: "#3b82f6" },
+            { label: "Resolved", value: resolvedCount, color: "#16a34a" },
+          ].map(s => (
+            <div key={s.label}
+              className="rounded-lg px-3 py-1.5 text-center border"
+              style={{ background: `${s.color}22`, borderColor: `${s.color}55` }}
+            >
+              <div className="text-base font-bold" style={{ color: s.color }}>{s.value}</div>
+              <div className="text-[9px] uppercase tracking-wide" style={{ color: s.color }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-2 ml-auto text-xs text-muted-foreground">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
+          <span>Auto-refresh 8s · Last: {lastRefresh.toLocaleTimeString()}</span>
+        </div>
+        <div className="flex gap-1">
+          {["active","all","new","assigned","en_route","on_site"].map(s => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className="px-2.5 py-1 rounded text-[10px] font-semibold transition-all"
+              style={statusFilter === s
+                ? { background: "#7c3aed", color: "#fff" }
+                : { background: "rgba(255,255,255,0.05)", color: "#9ca3af", border: "1px solid rgba(255,255,255,0.1)" }
+              }
+            >
+              {STATUS_LABELS[s] ?? s.replace("_"," ")}
+            </button>
+          ))}
+        </div>
+      </div>
+      {/* ── Main: map + fault list ─────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 flex-1 min-h-0">
+        {/* Map */}
+        <div className="lg:col-span-2 min-h-0 flex flex-col" style={{ minHeight: 380 }}>
+          <FaultMap faults={filtered} selected={selected} onSelect={setSelected} />
+        </div>
+        {/* Fault list */}
+        <div className="lg:col-span-1 flex flex-col gap-2 min-h-0 overflow-y-auto">
+          {loading && (
+            <div className="flex items-center justify-center flex-1 text-muted-foreground text-sm">
+              Loading faults…
+            </div>
+          )}
+          {!loading && filtered.length === 0 && (
+            <div className="flex flex-col items-center justify-center flex-1 text-center text-muted-foreground gap-3">
+              <div className="text-4xl opacity-30">✅</div>
+              <p className="text-sm">No active faults</p>
+            </div>
+          )}
+          {filtered.map(f => {
+            const isSelected  = selected?.id === f.id;
+            const sc          = severityColor(f.severity);
+            const statusColor = STATUS_COLORS[f.dispatchStatus] ?? "#9ca3af";
+            const isCritical  = f.severity.toLowerCase() === "critical";
+            const age         = minutesAgo(f.receivedAt);
+            const etaMins     = f.roadEta ?? f.eta;
+            const dist        = f.distanceKm;
+            const hasRealRoute = !!(f.routePolyline && f.routePolyline.length > 1);
+            return (
+              <div
+                key={f.id}
+                onClick={() => setSelected(isSelected ? null : f)}
+                className="rounded-xl border cursor-pointer transition-all"
+                style={{
+                  background:  isSelected ? "rgba(124,58,237,0.12)" : "rgba(255,255,255,0.03)",
+                  borderColor: isSelected ? "#7c3aed" : isCritical ? `${sc}66` : "rgba(255,255,255,0.08)",
+                  boxShadow:   isCritical ? `0 0 8px ${sc}44` : undefined,
+                  padding:     "10px 12px",
+                }}
+              >
+                {/* row 1: cow id + severity + age */}
+                <div className="flex items-center justify-between gap-2 mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-sm" style={{ color: sc }}>
+                      {isCritical && "🚨 "}{f.cowId}
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
+                      style={{ background: `${sc}33`, color: sc }}>
+                      {f.severity}
+                    </span>
+                  </div>
+                  <span className="text-[9px] text-muted-foreground">{age}m ago</span>
+                </div>
+                {/* row 2: alarm name */}
+                <div className="text-xs font-semibold text-white/90 mb-1 truncate">{f.alarmName}</div>
+                {/* row 3: power + backup + location */}
+                <div className="flex gap-3 text-[10px] text-muted-foreground mb-1.5">
+                  {f.powerSource && <span>⚡ {f.powerSource}</span>}
+                  {f.backupTime  && (
+                    <span className={isCritical ? "text-red-400 font-bold" : ""}>
+                      🔋 {f.backupTime} remaining
+                    </span>
+                  )}
+                  {f.location && <span>📍 {f.location}</span>}
+                </div>
+                {/* row 4: status + tech + eta */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                    style={{ background: `${statusColor}22`, color: statusColor, border: `1px solid ${statusColor}44` }}>
+                    {STATUS_LABELS[f.dispatchStatus] ?? f.dispatchStatus}
+                  </span>
+                  {f.assignedTech && (
+                    <span className="text-[10px] text-blue-400">
+                      👷 {f.assignedTech}
+                      {dist != null && <span className="text-muted-foreground"> · {dist}km</span>}
+                      {etaMins != null && (
+                        <span className="text-amber-400 font-semibold">
+                          {" "}· {etaMins}min ETA
+                          {hasRealRoute && <span className="text-sky-400 ml-0.5">🛣️</span>}
+                        </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+                {/* actions — shown when selected */}
+                {isSelected && (
+                  <div className="mt-2 pt-2 border-t border-white/10 flex gap-1.5 flex-wrap">
+                    {f.dispatchStatus === "new" && (
+                      <button onClick={e => { e.stopPropagation(); handleDispatch(f.id); }}
+                        className="px-2.5 py-1 rounded text-[10px] font-bold"
+                        style={{ background: "#dc262622", color: "#dc2626", border: "1px solid #dc262666" }}>
+                        Auto Dispatch
+                      </button>
+                    )}
+                    {["new","assigned"].includes(f.dispatchStatus) && (
+                      <button onClick={e => { e.stopPropagation(); handleStatusChange(f.id, "en_route"); }}
+                        className="px-2.5 py-1 rounded text-[10px] font-bold"
+                        style={{ background: "#3b82f622", color: "#3b82f6", border: "1px solid #3b82f666" }}>
+                        Mark En Route
+                      </button>
+                    )}
+                    {f.dispatchStatus === "en_route" && (
+                      <button onClick={e => { e.stopPropagation(); handleStatusChange(f.id, "on_site"); }}
+                        className="px-2.5 py-1 rounded text-[10px] font-bold"
+                        style={{ background: "#8b5cf622", color: "#8b5cf6", border: "1px solid #8b5cf666" }}>
+                        Mark On Site
+                      </button>
+                    )}
+                    {!["resolved","closed"].includes(f.dispatchStatus) && (
+                      <button onClick={e => { e.stopPropagation(); handleStatusChange(f.id, "resolved"); }}
+                        className="px-2.5 py-1 rounded text-[10px] font-bold"
+                        style={{ background: "#16a34a22", color: "#16a34a", border: "1px solid #16a34a66" }}>
+                        Resolve
+                      </button>
+                    )}
+                    {hasRealRoute && (
+                      <span className="text-[9px] text-sky-400 px-1.5 py-0.5 rounded border border-sky-400/30 bg-sky-400/10">
+                        🛣️ Road route active
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { box-shadow: 0 0 6px #dc2626; }
+          50%       { box-shadow: 0 0 18px #dc2626, 0 0 32px #dc262688; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+What you need in the other project to make it work:
+
+Requirement	Detail
+npm packages	@react-google-maps/api
+useGoogleMaps hook	Copy src/lib/GoogleMapsProvider.tsx from this project — it wraps @react-google-maps/api's LoadScript and exposes { isLoaded, loadError }
+Google Maps API key	Must be set in your environment (e.g. VITE_GOOGLE_MAPS_API_KEY)
+Tailwind CSS	Used for utility classes (className)
+API endpoints	Your backend must expose: GET /api/faults/active, POST /api/faults/pbi-sync, GET /api/faults/pbi-status, POST /api/faults/:id/dispatch, PATCH /api/faults/:id/status
