@@ -204,21 +204,36 @@ export default function FaultMap({ faults, sites, selectedId, onSelect }: Props)
         markersRef.current.push(marker);
 
         // ── Route polyline from team → site ──────────────────────────────
+        // Show route from the moment the team is Assigned until they Arrive on-site.
         const siteCoord = siteCoordMap.get(fault.cowId);
-        if (siteCoord && fault.status === "En Route") {
+        const showRoute = siteCoord
+          && (fault.status === "Assigned" || fault.status === "En Route")
+          && (fault.teamLat !== siteCoord.lat || fault.teamLng !== siteCoord.lng);
+        if (showRoute && siteCoord) {
+          // Dashed style while Assigned (pre-departure), solid while En Route.
+          const dashed = fault.status === "Assigned";
           const line = new PolylineClass({
             path: [
               { lat: fault.teamLat, lng: fault.teamLng },
               { lat: siteCoord.lat, lng: siteCoord.lng },
             ],
             strokeColor:   teamColor,
-            strokeOpacity: 0.7,
-            strokeWeight:  2,
-            icons: [{
-              icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 3,
-                      strokeColor: teamColor, fillColor: teamColor, fillOpacity: 1 },
-              offset: "50%",
-            }],
+            strokeOpacity: dashed ? 0 : 0.75,
+            strokeWeight:  3,
+            icons: dashed
+              ? [
+                  { icon: { path: "M 0,-1 0,1", strokeColor: teamColor,
+                            strokeOpacity: 0.9, scale: 3 },
+                    offset: "0", repeat: "12px" },
+                ]
+              : [
+                  { icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 3.5,
+                            strokeColor: teamColor, fillColor: teamColor, fillOpacity: 1 },
+                    offset: "60%" },
+                  { icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2.5,
+                            strokeColor: teamColor, fillColor: teamColor, fillOpacity: 0.7 },
+                    offset: "30%" },
+                ],
             map,
           });
           polylinesRef.current.push(line);
