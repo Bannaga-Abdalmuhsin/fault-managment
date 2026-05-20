@@ -28,13 +28,43 @@ export interface FaultRecord {
 }
 
 // ── Team pool ──────────────────────────────────────────────────────────────────
-const TEAMS = [
-  { id: "T1", name: "Team Alpha",   depot: [21.430, 39.826] as [number, number] },
-  { id: "T2", name: "Team Bravo",   depot: [21.415, 39.876] as [number, number] },
-  { id: "T3", name: "Team Charlie", depot: [21.350, 39.980] as [number, number] },
-  { id: "T4", name: "Team Delta",   depot: [21.384, 39.916] as [number, number] },
-  { id: "T5", name: "Team Echo",    depot: [21.432, 39.848] as [number, number] },
+interface TeamDef {
+  id:      string;
+  name:    string;
+  depot:   [number, number];
+  phone?:  string;
+  vehicle?: string;
+  leader?: string;
+}
+
+const DEFAULT_TEAMS: TeamDef[] = [
+  { id: "T1", name: "Team Alpha",   depot: [21.430, 39.826] },
+  { id: "T2", name: "Team Bravo",   depot: [21.415, 39.876] },
+  { id: "T3", name: "Team Charlie", depot: [21.350, 39.980] },
+  { id: "T4", name: "Team Delta",   depot: [21.384, 39.916] },
+  { id: "T5", name: "Team Echo",    depot: [21.432, 39.848] },
 ];
+
+function loadTeams(): TeamDef[] {
+  const raw = process.env.TEAMS_CONFIG;
+  if (!raw) return DEFAULT_TEAMS;
+  try {
+    const parsed = JSON.parse(raw) as TeamDef[];
+    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_TEAMS;
+    return parsed.map((t, i) => ({
+      ...DEFAULT_TEAMS[i % DEFAULT_TEAMS.length],
+      ...t,
+      depot: Array.isArray(t.depot) && t.depot.length === 2
+        ? [Number(t.depot[0]), Number(t.depot[1])] as [number, number]
+        : DEFAULT_TEAMS[i % DEFAULT_TEAMS.length].depot,
+    }));
+  } catch {
+    logger.warn("TEAMS_CONFIG is not valid JSON, using defaults");
+    return DEFAULT_TEAMS;
+  }
+}
+
+const TEAMS = loadTeams();
 
 // ── Area → approximate center coords ──────────────────────────────────────────
 const AREA_CENTERS: Record<string, [number, number]> = {
