@@ -24,6 +24,10 @@ export interface RiskCard {
   etaExpiry: number | null;
   severity: "critical" | "normal" | "cleared";
   clearedAt?: number;
+  // Field team from PBI
+  foStaff:  string;
+  subcon:   string;
+  owner:    string;
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -68,7 +72,10 @@ async function poll() {
           "startDate",    'Input Record'[Start Date],
           "assignedTime", 'Input Record'[Assigned Time],
           "issue",        'Input Record'[Issue],
-          "description",  'Input Record'[Problem Description]
+          "description",  'Input Record'[Problem Description],
+          "foStaff",      'Input Record'[FO Staff],
+          "subcon",       'Input Record'[SubCon],
+          "owner",        'Input Record'[Owner (Responsible)]
         )
       `),
       dax(`
@@ -134,11 +141,15 @@ async function poll() {
       const alarmType: RiskCard["alarmType"] = isPowerAlarm(alarmDescription) ? "power" : "nsa";
 
       const ttNumber = (r["[ttNumber]"] ?? "").toString().trim();
+      const foStaff  = (r["[foStaff]"]  ?? "").toString().trim();
+      const subcon   = (r["[subcon]"]   ?? "").toString().trim();
+      const owner    = (r["[owner]"]    ?? "").toString().trim();
 
       activeRiskCards.set(siteId, {
         siteId, ttNumber, alarmType, alarmDescription, assignedTime,
         powerConfiguration, batteryBackupMinutes,
         etaMinutes, batteryExpiry, etaExpiry, severity,
+        foStaff, subcon, owner,
       });
       incoming.add(siteId);
     }

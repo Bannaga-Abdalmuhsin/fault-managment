@@ -18,6 +18,10 @@ export interface FaultRecord {
   assignedTechId?: number;
   acesStatus?: string;
   ttNumber?: string;
+  // PBI staff fields
+  foStaff?: string;
+  subcon?: string;
+  owner?: string;
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -197,9 +201,18 @@ function FaultDetail({ fault, onClose }: { fault: FaultRecord; onClose: () => vo
           val={`${fault.siteLat.toFixed(5)}, ${fault.siteLng.toFixed(5)}`}
           accent="rgba(255,255,255,.6)" />
       )}
-      <Row label="Assigned Tech"
-        val={fault.assignedTechId ? `Tech #${fault.assignedTechId}` : fault.assignedTeam}
-        accent={fault.assignedTechId ? P.green : undefined} />
+      {fault.foStaff && (
+        <Row label="FO Staff"       val={fault.foStaff} accent={P.green} />
+      )}
+      {fault.subcon && (
+        <Row label="Subcontractor"  val={fault.subcon} accent="rgba(255,255,255,.85)" />
+      )}
+      {fault.owner && (
+        <Row label="Owner"          val={fault.owner} accent="rgba(255,255,255,.7)" />
+      )}
+      {fault.assignedTechId && (
+        <Row label="ACES Tech"      val={`Tech #${fault.assignedTechId}`} accent="#60A5FA" />
+      )}
       {fault.acesStatus && (
         <Row label="ACES Status"    val={fault.acesStatus.replace(/_/g, " ").toUpperCase()} accent="#FBBF24" />
       )}

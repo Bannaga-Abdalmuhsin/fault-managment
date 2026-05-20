@@ -366,6 +366,10 @@ async function poll() {
 
       const etaExpiry = card.etaExpiry ?? (card.assignedTime + card.etaMinutes * 60_000);
 
+      // Real team from PBI — foStaff is the FO engineer, subcon is the subcontractor
+      const assignedTeam = card.foStaff  || card.subcon || card.owner || "Unassigned";
+      const teamId       = card.subcon   || card.foStaff || faultId;
+
       const fault: FaultRecord = {
         id:                 faultId,
         cowId:              card.siteId,
@@ -373,8 +377,8 @@ async function poll() {
         alarmType:          card.alarmType,
         severity:           sev as FaultSeverity,
         status:             "Assigned",
-        assignedTeam:       "Dispatching…",
-        teamId:             "PENDING",
+        assignedTeam,
+        teamId,
         dispatchTime:       card.assignedTime,
         etaMinutes:         card.etaMinutes,
         etaExpiry,
@@ -388,6 +392,9 @@ async function poll() {
         siteLat,
         siteLng,
         ttNumber:           card.ttNumber || faultId,
+        foStaff:            card.foStaff  || undefined,
+        subcon:             card.subcon   || undefined,
+        owner:              card.owner    || undefined,
       };
 
       activeFaults.set(card.siteId, fault);
