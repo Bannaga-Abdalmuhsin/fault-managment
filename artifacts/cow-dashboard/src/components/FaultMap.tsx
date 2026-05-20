@@ -42,6 +42,24 @@ const STATUS_TEAM_COLOR: Record<FaultStatus, string> = {
   "Closed":    "#6B7280",
 };
 
+// ── Distance helpers (meters) ───────────────────────────────────────────────
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6_371_000; // Earth radius in meters
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+function trailDistance(pts: { lat: number; lng: number }[]): number {
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) {
+    total += haversineMeters(pts[i - 1].lat, pts[i - 1].lng, pts[i].lat, pts[i].lng);
+  }
+  return total;
+}
+
 interface SiteCoord { id: string; lat: number; lng: number; }
 
 interface Props {
@@ -58,6 +76,8 @@ export default function FaultMap({ faults, sites, selectedId, onSelect }: Props)
   const markersRef   = useRef<any[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const polylinesRef = useRef<any[]>([]);
+  // Per-fault movement breadcrumbs (last ~100m of actual movement)
+  const trailsRef = useRef<Map<string, { lat: number; lng: number }[]>>(new Map());
 
   // ── Init map once ────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -112,6 +132,12 @@ export default function FaultMap({ faults, sites, selectedId, onSelect }: Props)
       // Build a site-coord lookup
       const siteCoordMap = new Map<string, { lat: number; lng: number }>();
       for (const s of sites) siteCoordMap.set(s.id, { lat: s.lat, lng: s.lng });
+
+      // Drop trails for faults that no longer exist or are closed.
+      const activeIds = new Set(faults.filter(f => f.status !== "Closed").map(f => f.id));
+      for (const id of [...trailsRef.current.keys()]) {
+        if (!activeIds.has(id)) trailsRef.current.delete(id);
+      }
 
       // ── COW site markers (only sites with active faults) ──────────────────
       for (const fault of faults) {
@@ -203,37 +229,35 @@ export default function FaultMap({ faults, sites, selectedId, onSelect }: Props)
         marker.addListener("gmp-click", () => onSelect(fault.id));
         markersRef.current.push(marker);
 
-        // ── Route polyline from team → site ──────────────────────────────
-        // Show route from the moment the team is Assigned until they Arrive on-site.
-        const siteCoord = siteCoordMap.get(fault.cowId);
-        const showRoute = siteCoord
-          && (fault.status === "Assigned" || fault.status === "En Route")
-          && (fault.teamLat !== siteCoord.lat || fault.teamLng !== siteCoord.lng);
-        if (showRoute && siteCoord) {
-          // Dashed style while Assigned (pre-departure), solid while En Route.
-          const dashed = fault.status === "Assigned";
+        // ── Movement trail (last ~100 m of actual team movement) ─────────
+        // We append every fresh team position to a per-fault breadcrumb list
+        // and trim from the front so cumulative distance stays under 100 m.
+        const trail = trailsRef.current.get(fault.id) ?? [];
+        const last  = trail[trail.length - 1];
+        // Only push a new point if the team has actually moved (>2 m).
+        if (!last || haversineMeters(last.lat, last.lng, fault.teamLat, fault.teamLng) > 2) {
+          trail.push({ lat: fault.teamLat, lng: fault.teamLng });
+        }
+        // Trim from the front: keep only the most recent 100 m.
+        while (trail.length > 1 && trailDistance(trail) > 100) {
+          trail.shift();
+        }
+        trailsRef.current.set(fault.id, trail);
+
+        // Draw the trail only while the team is actively moving (Assigned or En Route)
+        // and we have at least two points to form a line.
+        const isMoving = fault.status === "Assigned" || fault.status === "En Route";
+        if (isMoving && trail.length >= 2) {
           const line = new PolylineClass({
-            path: [
-              { lat: fault.teamLat, lng: fault.teamLng },
-              { lat: siteCoord.lat, lng: siteCoord.lng },
-            ],
+            path: trail.map(p => ({ lat: p.lat, lng: p.lng })),
             strokeColor:   teamColor,
-            strokeOpacity: dashed ? 0 : 0.75,
-            strokeWeight:  3,
-            icons: dashed
-              ? [
-                  { icon: { path: "M 0,-1 0,1", strokeColor: teamColor,
-                            strokeOpacity: 0.9, scale: 3 },
-                    offset: "0", repeat: "12px" },
-                ]
-              : [
-                  { icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 3.5,
-                            strokeColor: teamColor, fillColor: teamColor, fillOpacity: 1 },
-                    offset: "60%" },
-                  { icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2.5,
-                            strokeColor: teamColor, fillColor: teamColor, fillOpacity: 0.7 },
-                    offset: "30%" },
-                ],
+            strokeOpacity: 0.85,
+            strokeWeight:  4,
+            icons: [{
+              icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 3.5,
+                      strokeColor: teamColor, fillColor: teamColor, fillOpacity: 1 },
+              offset: "100%",
+            }],
             map,
           });
           polylinesRef.current.push(line);
