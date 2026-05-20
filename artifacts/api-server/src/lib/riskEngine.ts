@@ -56,8 +56,9 @@ function broadcast() {
 // ── Poll engine ───────────────────────────────────────────────────────────────
 async function poll() {
   try {
-    // 1. Fetch open tickets + area data from PBI in parallel
-    const [ticketRows, areaRows] = await Promise.all([
+    // 1. Fetch open tickets from both tables + area data in parallel
+    const [powerRows, nsaRows, areaRows] = await Promise.all([
+      // Power tickets from Input Record
       dax(`
         EVALUATE
         VAR _hajjSites = SELECTCOLUMNS(FILTER(DB, DB[Region] = "WR-HAJJ"), "sid", DB[Site ID])
@@ -78,6 +79,27 @@ async function poll() {
           "owner",        'Input Record'[Owner (Responsible)]
         )
       `),
+      // NSA / telecom tickets from SIR (Telecom COW Risk dashboard)
+      dax(`
+        EVALUATE
+        VAR _hajjSites = SELECTCOLUMNS(FILTER(DB, DB[Region] = "WR-HAJJ"), "sid", DB[Site ID])
+        RETURN
+        SELECTCOLUMNS(
+          FILTER(SIR,
+            SIR[Status] <> "Closed" &&
+            CONTAINS(_hajjSites, [sid], SIR[Site])
+          ),
+          "ttNumber",    SIR[TT Number],
+          "siteId",      SIR[Site],
+          "startDate",   SIR[OOS Start Date],
+          "description", SIR[Alarms Description],
+          "faultType",   SIR[Fault Type],
+          "foStaff",     SIR[FO Staff],
+          "owner",       SIR[Owner],
+          "area",        SIR[Area]
+        )
+      `),
+      // Area lookup from site master
       dax(`
         EVALUATE
         SELECTCOLUMNS(
@@ -88,7 +110,7 @@ async function poll() {
       `),
     ]);
 
-    // 2. Area map from PBI
+    // 2. Area map from PBI (DB master — used as fallback)
     const areaMap = new Map<string, string>();
     for (const r of areaRows) {
       const sid  = (r["[siteId]"] ?? "").toString().trim();
@@ -99,59 +121,85 @@ async function poll() {
     // 3. Site reference data from Excel (power source + battery backup)
     const siteData = getSiteData();
 
-    // 4. Build updated card map
-    const incoming = new Set<string>();
-    for (const r of ticketRows) {
+    // ── Helper: build a RiskCard from a raw PBI row ───────────────────────────
+    function buildCard(
+      r: Record<string, unknown>,
+      alarmType: RiskCard["alarmType"],
+      opts: { areaOverride?: string; subcon?: string },
+    ): RiskCard | null {
       const siteId = (r["[siteId]"] ?? "").toString().trim();
-      if (!siteId) continue;
+      if (!siteId) return null;
 
-      // Parse assigned time — combine Start Date + Assigned Time (Excel epoch time-only)
+      // Parse assigned time
       const datePart = (r["[startDate]"] ?? "").toString().split("T")[0];
-      const timePart = (r["[assignedTime]"] ?? "").toString().split("T")[1] ?? "";
+      const timePart = (r["[assignedTime]"] ?? r["[startDate]"] ?? "").toString().split("T")[1] ?? "";
       const assignedIso = datePart && timePart
         ? `${datePart}T${timePart}+03:00`
         : (r["[startDate]"] ?? "").toString();
       const assignedMs = Date.parse(assignedIso) || Date.now();
 
-      // Preserve original assignedTime (prevents timer reset on re-poll)
       const existing = activeRiskCards.get(siteId);
       const assignedTime = (existing && existing.severity !== "cleared")
         ? existing.assignedTime : assignedMs;
 
-      // Power config + battery from Excel reference sheet
       const site = siteData.get(siteId);
-      const powerConfiguration  = site?.powerConfiguration  ?? "Unknown";
+      const powerConfiguration   = site?.powerConfiguration   ?? "Unknown";
       const batteryBackupMinutes = site?.batteryBackupMinutes ?? null;
 
-      // ETA: Makkah Remote = 30 min, all others (Arafat / Muzdalifah / Mina / etc.) = 15 min
-      const area = areaMap.get(siteId) ?? "";
+      const area       = opts.areaOverride || areaMap.get(siteId) || "";
       const etaMinutes = area.toLowerCase().includes("makkah remote") ? 30 : 15;
 
-      // Expiry timestamps
       const batteryExpiry = batteryBackupMinutes != null
         ? assignedTime + batteryBackupMinutes * 60_000 : null;
       const etaExpiry = assignedTime + etaMinutes * 60_000;
 
-      // Severity: critical if battery depletes before ETA arrives
-      const now = Date.now();
+      const now        = Date.now();
       const battRemain = batteryExpiry != null ? batteryExpiry - now : Infinity;
       const severity: RiskCard["severity"] = battRemain < (etaExpiry - now) ? "critical" : "normal";
 
-      const alarmDescription = (r["[description]"] ?? r["[issue]"] ?? "Open Ticket").toString();
+      const alarmDescription = (
+        r["[description]"] ?? r["[faultType]"] ?? r["[issue]"] ?? "Open Ticket"
+      ).toString();
+
+      return {
+        siteId,
+        ttNumber:           (r["[ttNumber]"] ?? "").toString().trim(),
+        alarmType,
+        alarmDescription,
+        assignedTime,
+        powerConfiguration,
+        batteryBackupMinutes,
+        etaMinutes,
+        batteryExpiry,
+        etaExpiry,
+        severity,
+        foStaff: (r["[foStaff]"] ?? "").toString().trim(),
+        subcon:  (opts.subcon    ?? "").toString().trim(),
+        owner:   (r["[owner]"]   ?? "").toString().trim(),
+      };
+    }
+
+    // 4. Build updated card map — NSA first, then power (power overwrites if same site)
+    const incoming = new Set<string>();
+
+    // NSA tickets (SIR table — Telecom COW Risk dashboard)
+    for (const r of nsaRows) {
+      const areaOverride = (r["[area]"] ?? "").toString().trim();
+      const card = buildCard(r, "nsa", { areaOverride });
+      if (!card) continue;
+      activeRiskCards.set(card.siteId, card);
+      incoming.add(card.siteId);
+    }
+
+    // Power tickets (Input Record) — overwrites NSA if same site
+    for (const r of powerRows) {
+      const subcon = (r["[subcon]"] ?? "").toString().trim();
+      const alarmDescription = (r["[description]"] ?? r["[issue]"] ?? "").toString();
       const alarmType: RiskCard["alarmType"] = isPowerAlarm(alarmDescription) ? "power" : "nsa";
-
-      const ttNumber = (r["[ttNumber]"] ?? "").toString().trim();
-      const foStaff  = (r["[foStaff]"]  ?? "").toString().trim();
-      const subcon   = (r["[subcon]"]   ?? "").toString().trim();
-      const owner    = (r["[owner]"]    ?? "").toString().trim();
-
-      activeRiskCards.set(siteId, {
-        siteId, ttNumber, alarmType, alarmDescription, assignedTime,
-        powerConfiguration, batteryBackupMinutes,
-        etaMinutes, batteryExpiry, etaExpiry, severity,
-        foStaff, subcon, owner,
-      });
-      incoming.add(siteId);
+      const card = buildCard(r, alarmType, { subcon });
+      if (!card) continue;
+      activeRiskCards.set(card.siteId, card);
+      incoming.add(card.siteId);
     }
 
     // 5. Mark cleared cards

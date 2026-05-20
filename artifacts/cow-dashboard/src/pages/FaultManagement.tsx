@@ -210,9 +210,6 @@ function FaultDetail({ fault, onClose }: { fault: FaultRecord; onClose: () => vo
       {fault.owner && (
         <Row label="Owner"          val={fault.owner} accent="rgba(255,255,255,.7)" />
       )}
-      {fault.assignedTechId && (
-        <Row label="ACES Tech"      val={`Tech #${fault.assignedTechId}`} accent="#60A5FA" />
-      )}
       {fault.acesStatus && (
         <Row label="ACES Status"    val={fault.acesStatus.replace(/_/g, " ").toUpperCase()} accent="#FBBF24" />
       )}
