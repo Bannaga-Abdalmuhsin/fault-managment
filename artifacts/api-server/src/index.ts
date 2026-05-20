@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startRiskEngine } from "./lib/riskEngine";
+import { startFaultEngine } from "./lib/faultEngine";
 import { warmUp } from "./lib/siteData";
 
 const rawPort = process.env["PORT"];
@@ -26,4 +27,5 @@ app.listen(port, async (err) => {
   logger.info({ port }, "Server listening");
   await warmUp();
   startRiskEngine();
+  startFaultEngine();
 });

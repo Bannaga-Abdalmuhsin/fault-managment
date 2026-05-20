@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Dashboard from "@/pages/Dashboard";
 import Login from "@/pages/Login";
+import FaultManagement from "@/pages/FaultManagement";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -20,8 +21,11 @@ async function verifyToken(token: string): Promise<boolean> {
   }
 }
 
+type Page = "dashboard" | "faults";
+
 export default function App() {
   const [authState, setAuthState] = useState<"loading" | "authenticated" | "unauthenticated">("loading");
+  const [page, setPage] = useState<Page>("dashboard");
 
   useEffect(() => {
     const token = sessionStorage.getItem("cow_token");
@@ -51,7 +55,10 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Dashboard />
+      {page === "faults"
+        ? <FaultManagement onBack={() => setPage("dashboard")} />
+        : <Dashboard onNavigate={(p: Page) => setPage(p)} />
+      }
     </QueryClientProvider>
   );
 }

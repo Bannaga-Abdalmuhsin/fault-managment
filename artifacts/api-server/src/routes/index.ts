@@ -6,6 +6,7 @@ import dashboardRouter from "./dashboard";
 import powerbiRouter from "./powerbi";
 import authRouter from "./auth";
 import riskRouter from "./risk";
+import faultsRouter from "./faults";
 
 const router: IRouter = Router();
 
@@ -16,5 +17,6 @@ router.use(ticketsRouter);
 router.use(dashboardRouter);
 router.use(powerbiRouter);
 router.use(riskRouter);
+router.use(faultsRouter);
 
 export default router;

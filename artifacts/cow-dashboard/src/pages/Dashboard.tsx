@@ -516,7 +516,7 @@ const avail = (on: number, tot: number) => tot ? Math.round((on / tot) * 1000) /
 const dotC  = (v: number)               => v >= 95 ? P.green : v >= 80 ? P.orange : P.red;
 
 // ─── Main dashboard ───────────────────────────────────────────────────────────
-export default function Dashboard() {
+export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults") => void }) {
   const [statusFilter, setStatusFilter] = useState("Open");
   const [cowIdFilter,  setCowIdFilter]  = useState("All");
   const [areaFilter,   setAreaFilter]   = useState<string | null>(null);
@@ -629,8 +629,25 @@ export default function Dashboard() {
             textShadow: "0 2px 16px rgba(0,0,0,0.4)" }}>
             COW HAJJ 1447 — Interactive Status
           </div>
-
         </div>
+
+        {/* Fault Management nav button */}
+        {onNavigate && (
+          <button
+            onClick={() => onNavigate("faults")}
+            style={{
+              display: "flex", alignItems: "center", gap: 7, cursor: "pointer",
+              background: "rgba(239,68,68,0.14)", border: "1px solid rgba(239,68,68,0.45)",
+              borderRadius: 8, padding: "5px 13px", color: "#FCA5A5",
+              fontSize: 12, fontWeight: 800, letterSpacing: "0.04em", transition: "all 0.2s",
+              whiteSpace: "nowrap",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.28)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(239,68,68,0.14)"; }}
+          >
+            ⚠ FAULT MGT
+          </button>
+        )}
 
         <div style={{ display: "flex", alignItems: "center", gap: 6,
           background: "rgba(0,200,120,0.12)", border: "1px solid rgba(0,200,120,0.35)",
