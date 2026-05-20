@@ -432,25 +432,26 @@ async function poll() {
     });
   }
 
-  // Close faults that cleared from risk engine (and not tracked by ACES)
+  // Close faults whose PBI ticket has cleared (PBI is the source of truth).
+  // When the ticket disappears from the risk engine (i.e. status flipped to
+  // "Closed" on the main dashboard) we move the fault straight to the closed
+  // history — regardless of what ACES still reports.
   for (const [siteId, fault] of activeFaults) {
     if (incoming.has(siteId)) continue;
-    if (fault.acesId) continue;  // let ACES lifecycle manage these
-    const status = simulateStatus(fault, now);
-    if (status === "Closed") {
-      activeFaults.delete(siteId);
-      _siteToFault.delete(siteId);
-      closedFaults.set(fault.id, { ...fault, status: "Closed", closedAt: now });
-      setTimeout(() => closedFaults.delete(fault.id), 2 * 3_600_000);
-    } else {
-      const [teamLat, teamLng] = computeTeamPos(fault, "Working");
-      activeFaults.set(siteId, {
-        ...fault, status: "Resolved",
-        teamLat, teamLng,
-        arrivedAt:  fault.arrivedAt  ?? fault.etaExpiry,
-        resolvedAt: fault.resolvedAt ?? now,
-      });
-    }
+
+    activeFaults.delete(siteId);
+    _siteToFault.delete(siteId);
+    closedFaults.set(fault.id, {
+      ...fault,
+      status: "Closed",
+      arrivedAt:  fault.arrivedAt  ?? fault.etaExpiry,
+      resolvedAt: fault.resolvedAt ?? now,
+      closedAt:   now,
+    });
+    // Keep in closed-history for 24h so the UI can show it on the Closed tab.
+    setTimeout(() => closedFaults.delete(fault.id), 24 * 3_600_000);
+    logger.info({ faultId: fault.id, cowId: fault.cowId, ttNumber: fault.ttNumber },
+      "Fault closed (PBI ticket cleared)");
   }
 
   // Refresh ACES status for all dispatched faults
