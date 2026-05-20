@@ -12,6 +12,12 @@ export interface FaultRecord {
   arrivedAt: number | null; resolvedAt: number | null; closedAt: number | null;
   backupRemainingMin: number | null; area: string;
   teamLat: number; teamLng: number;
+  siteLat?: number; siteLng?: number;
+  // ACES dispatch fields
+  acesId?: number;
+  assignedTechId?: number;
+  acesStatus?: string;
+  ttNumber?: string;
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────
@@ -176,14 +182,30 @@ function FaultDetail({ fault, onClose }: { fault: FaultRecord; onClose: () => vo
       </div>
 
       {/* Fields */}
-      <Row label="TT ID"          val={fault.id} />
+      {fault.ttNumber && fault.ttNumber !== fault.id && (
+        <Row label="TT Number"      val={fault.ttNumber} accent="#C4B5FD" />
+      )}
+      <Row label="Fault ID"       val={fault.id} />
+      {fault.acesId && (
+        <Row label="ACES Fault #"   val={fault.acesId} accent="#60A5FA" />
+      )}
       <Row label="COW ID"         val={fault.cowId} />
       <Row label="Alarm Type"     val={fault.alarmType === "power" ? "⚡ Power" : "📡 NSA"} />
       <Row label="Area"           val={fault.area || "Hajj Zone"} />
-      <Row label="Assigned Team"  val={fault.assignedTeam} />
+      {fault.siteLat && fault.siteLng && (
+        <Row label="GPS"
+          val={`${fault.siteLat.toFixed(5)}, ${fault.siteLng.toFixed(5)}`}
+          accent="rgba(255,255,255,.6)" />
+      )}
+      <Row label="Assigned Tech"
+        val={fault.assignedTechId ? `Tech #${fault.assignedTechId}` : fault.assignedTeam}
+        accent={fault.assignedTechId ? P.green : undefined} />
+      {fault.acesStatus && (
+        <Row label="ACES Status"    val={fault.acesStatus.replace(/_/g, " ").toUpperCase()} accent="#FBBF24" />
+      )}
       <Row label="Dispatch Time"  val={fmtTime(fault.dispatchTime)} />
       <Row label="ETA"            val={`${fault.etaMinutes} min`} />
-      {fault.arrivedAt  && <Row label="Arrived At"   val={fmtTime(fault.arrivedAt)} accent={P.green} />}
+      {fault.arrivedAt  && <Row label="Arrived At"   val={fmtTime(fault.arrivedAt)}  accent={P.green} />}
       {fault.resolvedAt && <Row label="Resolved At"  val={fmtTime(fault.resolvedAt)} accent={P.green} />}
       <Row label="Elapsed"        val={elapsed} />
       {etaLeft !== null && <Row label="ETA Remaining" val={`${etaLeft} min`} accent={P.orange} />}

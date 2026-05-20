@@ -13,6 +13,7 @@ function isPowerAlarm(text: string): boolean {
 // ── RiskCard type ─────────────────────────────────────────────────────────────
 export interface RiskCard {
   siteId: string;
+  ttNumber: string;
   alarmType: "power" | "nsa";
   alarmDescription: string;
   assignedTime: number;
@@ -62,6 +63,7 @@ async function poll() {
             'Input Record'[Status] <> "Closed" &&
             CONTAINS(_hajjSites, [sid], 'Input Record'[SITE ID])
           ),
+          "ttNumber",     'Input Record'[TT Number],
           "siteId",       'Input Record'[SITE ID],
           "startDate",    'Input Record'[Start Date],
           "assignedTime", 'Input Record'[Assigned Time],
@@ -131,8 +133,10 @@ async function poll() {
       const alarmDescription = (r["[description]"] ?? r["[issue]"] ?? "Open Ticket").toString();
       const alarmType: RiskCard["alarmType"] = isPowerAlarm(alarmDescription) ? "power" : "nsa";
 
+      const ttNumber = (r["[ttNumber]"] ?? "").toString().trim();
+
       activeRiskCards.set(siteId, {
-        siteId, alarmType, alarmDescription, assignedTime,
+        siteId, ttNumber, alarmType, alarmDescription, assignedTime,
         powerConfiguration, batteryBackupMinutes,
         etaMinutes, batteryExpiry, etaExpiry, severity,
       });
