@@ -38,6 +38,10 @@ export interface FaultRecord {
   assignedTechId?:    number;
   acesStatus?:        string;
   ttNumber?:          string;
+  // PBI staff fields (shown in Fault Management detail panel)
+  foStaff?:           string;
+  subcon?:            string;
+  owner?:             string;
 }
 
 // ── Site coords cache (loaded once from PBI) ──────────────────────────────────
@@ -463,6 +467,66 @@ async function poll() {
 // ── Public API ─────────────────────────────────────────────────────────────────
 export function getActiveFaults():  FaultRecord[] { return [...activeFaults.values()]; }
 export function getFaultHistory():  FaultRecord[] { return [...closedFaults.values()]; }
+
+// ── Manual operator overrides (used by REST endpoints) ────────────────────────
+function findActiveById(id: string): { siteId: string; fault: FaultRecord } | null {
+  for (const [siteId, fault] of activeFaults) {
+    if (fault.id === id) return { siteId, fault };
+  }
+  return null;
+}
+
+/** Manually re-dispatch a fault to ACES. Returns true if found. */
+export async function manualDispatch(faultId: string): Promise<boolean> {
+  const hit = findActiveById(faultId);
+  if (!hit) return false;
+  // Build a minimal RiskCard-like object for dispatch (reuse fault state)
+  const f = hit.fault;
+  const card: RiskCard = {
+    siteId:               f.cowId,
+    ttNumber:             f.ttNumber ?? f.id,
+    alarmType:            f.alarmType,
+    alarmDescription:     f.alarm,
+    assignedTime:         f.dispatchTime,
+    powerConfiguration:   "",
+    batteryBackupMinutes: f.backupRemainingMin,
+    etaMinutes:           f.etaMinutes,
+    batteryExpiry:        null,
+    etaExpiry:            f.etaExpiry,
+    severity:             f.severity === "critical" ? "critical" : "normal",
+    foStaff:              f.foStaff ?? "",
+    subcon:               f.subcon  ?? "",
+    owner:                f.owner   ?? "",
+  };
+  await dispatchToAces(f, card);
+  broadcast();
+  return true;
+}
+
+/** Manually override the status of a fault. Returns true if found. */
+export function manualSetStatus(faultId: string, status: FaultStatus): boolean {
+  const hit = findActiveById(faultId);
+  if (!hit) return false;
+  const now = Date.now();
+  const next: FaultRecord = {
+    ...hit.fault,
+    status,
+    arrivedAt:  (status === "Arrived" || status === "Working" || status === "Resolved" || status === "Closed")
+                 ? (hit.fault.arrivedAt ?? now) : hit.fault.arrivedAt,
+    resolvedAt: (status === "Resolved" || status === "Closed")
+                 ? (hit.fault.resolvedAt ?? now) : hit.fault.resolvedAt,
+  };
+  if (status === "Closed") {
+    activeFaults.delete(hit.siteId);
+    _siteToFault.delete(hit.siteId);
+    closedFaults.set(next.id, { ...next, closedAt: now });
+    setTimeout(() => closedFaults.delete(next.id), 24 * 3_600_000);
+  } else {
+    activeFaults.set(hit.siteId, next);
+  }
+  broadcast();
+  return true;
+}
 
 export async function startFaultEngine() {
   await loadSiteCoords();

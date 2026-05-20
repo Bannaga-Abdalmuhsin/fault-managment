@@ -138,7 +138,11 @@ function FaultItem({ fault, selected, onClick }: { fault: FaultRecord; selected:
 }
 
 // ── Fault detail panel ────────────────────────────────────────────────────────
-function FaultDetail({ fault, onClose }: { fault: FaultRecord; onClose: () => void }) {
+function FaultDetail({ fault, onClose, onAction }: {
+  fault: FaultRecord;
+  onClose: () => void;
+  onAction: (kind: "dispatch" | "status", status?: FaultStatus) => void;
+}) {
   const s  = SEV[fault.severity];
   const st = STAT[fault.status];
   const now = Date.now();
@@ -243,12 +247,148 @@ function FaultDetail({ fault, onClose }: { fault: FaultRecord; onClose: () => vo
         <div style={{ fontWeight: 700, color: "rgba(200,140,255,.7)", marginBottom: 3 }}>TEAM GPS</div>
         {fault.teamLat.toFixed(4)}°N, {fault.teamLng.toFixed(4)}°E
       </div>
+
+      {/* Manual operator actions */}
+      {fault.status !== "Closed" && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 10, fontWeight: 800, color: "rgba(200,140,255,.7)",
+            letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
+            Operator Actions
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            <ActionButton label="↻ Re-dispatch" color="#A78BFA" onClick={() => onAction("dispatch")} />
+            {fault.status === "Assigned" && (
+              <ActionButton label="🚐 En Route" color="#60A5FA" onClick={() => onAction("status", "En Route")} />
+            )}
+            {(fault.status === "Assigned" || fault.status === "En Route") && (
+              <ActionButton label="📍 Arrived" color="#34D399" onClick={() => onAction("status", "Arrived")} />
+            )}
+            {fault.status !== "Resolved" && (
+              <ActionButton label="🔧 Working" color="#FBBF24" onClick={() => onAction("status", "Working")} />
+            )}
+            <ActionButton label="✓ Resolve" color="#4ADE80" onClick={() => onAction("status", "Resolved")} />
+            <ActionButton label="✕ Close"    color="#9CA3AF" onClick={() => onAction("status", "Closed")} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Site type from PBI ────────────────────────────────────────────────────────
 interface PbiSite { id: string; latitude: number | null; longitude: number | null; area: string | null; }
+
+// ── PBI sync status (from /api/faults/pbi-status) ─────────────────────────────
+interface PbiSyncStatus {
+  ok:         boolean;
+  syncedAt:   number | null;
+  powerCount: number;
+  sirCount:   number;
+  pbiCount:   number;
+  upserted:   number;
+  closed:     number;
+  errors:     string[];
+}
+
+// ── PBI sync bar (STC purple glass) ───────────────────────────────────────────
+function PbiSyncBar({ status, syncing, onSync }: {
+  status: PbiSyncStatus | null;
+  syncing: boolean;
+  onSync: () => void;
+}) {
+  const ok    = status?.ok === true;
+  const color = status == null ? "#9CA3AF" : ok ? P.green : P.red;
+  return (
+    <Glass style={{
+      padding: "8px 14px", display: "flex", alignItems: "center",
+      gap: 10, flexWrap: "wrap", fontSize: 11,
+    }}>
+      <span style={{ color: "#FACC15", fontWeight: 800, letterSpacing: 1 }}>⚡ POWER BI</span>
+      <span style={{ color: "rgba(255,255,255,.25)" }}>|</span>
+      {status ? (
+        <>
+          <span style={{
+            width: 7, height: 7, borderRadius: "50%", background: color,
+            boxShadow: `0 0 6px ${color}`,
+            animation: ok ? "pulse 2s ease-in-out infinite" : "none",
+          }} />
+          <span style={{ color, fontWeight: 700 }}>{ok ? "Synced" : "Sync error"}</span>
+          {(status.powerCount > 0 || status.sirCount > 0) && (
+            <span style={{ color: "#93C5FD" }}>
+              ⚡ {status.powerCount} power · 📡 {status.sirCount} telecom
+            </span>
+          )}
+          {status.pbiCount > 0 && (
+            <span style={{ color: "#C4B5FD" }}>({status.pbiCount} matched sites)</span>
+          )}
+          {status.upserted > 0 && <span style={{ color: "#34D399" }}>+{status.upserted} inserted</span>}
+          {status.closed   > 0 && <span style={{ color: "#F87171" }}>{status.closed} auto-closed</span>}
+          {status.syncedAt && (
+            <span style={{ color: "rgba(255,255,255,.45)" }}>
+              · {new Date(status.syncedAt).toLocaleTimeString("en-US", { hour12: false })}
+            </span>
+          )}
+          {status.errors.length > 0 && (
+            <span title={status.errors.join(" | ")}
+              style={{
+                color: "#FCA5A5", maxWidth: 280, overflow: "hidden",
+                textOverflow: "ellipsis", whiteSpace: "nowrap",
+              }}>
+              ⚠ {status.errors[0]}
+            </span>
+          )}
+        </>
+      ) : (
+        <span style={{ color: "rgba(255,255,255,.45)" }}>Waiting for first sync…</span>
+      )}
+      <button
+        onClick={onSync}
+        disabled={syncing}
+        style={{
+          marginLeft: "auto",
+          background: syncing ? "rgba(124,58,237,.3)" : "rgba(124,58,237,.55)",
+          color: "#fff",
+          border: `1px solid ${P.glassBorder}`,
+          borderRadius: 8,
+          padding: "3px 12px",
+          fontSize: 11,
+          fontWeight: 700,
+          cursor: syncing ? "not-allowed" : "pointer",
+          opacity: syncing ? 0.7 : 1,
+          transition: "all .15s",
+        }}
+      >
+        {syncing ? "Syncing…" : "Sync Now"}
+      </button>
+    </Glass>
+  );
+}
+
+// ── Manual action buttons (STC purple glass) ──────────────────────────────────
+function ActionButton({ label, color, onClick }: { label: string; color: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} style={{
+      background: `${color}22`, color, border: `1px solid ${color}66`,
+      borderRadius: 8, padding: "5px 11px", fontSize: 11, fontWeight: 700,
+      cursor: "pointer", transition: "all .15s",
+    }}>
+      {label}
+    </button>
+  );
+}
+
+async function postJson(url: string, body?: unknown, method: "POST" | "PATCH" = "POST") {
+  try {
+    await fetch(url, {
+      method,
+      headers: {
+        "Content-Type":   "application/json",
+        "Authorization": `Bearer ${sessionStorage.getItem("cow_token") ?? ""}`,
+      },
+      body: body == null ? undefined : JSON.stringify(body),
+    });
+  } catch { /* swallow — SSE will reflect state */ }
+}
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -262,7 +402,43 @@ export default function FaultManagement({ onBack }: { onBack: () => void }) {
   const [sevFilter, setSevFilter] = useState<FaultSeverity | "All">("All");
   const [statFilter,setStatFilter]= useState<FaultStatus | "Active" | "Closed">("Active");
   const [connected, setConnected] = useState(false);
+  const [pbiStatus, setPbiStatus] = useState<PbiSyncStatus | null>(null);
+  const [pbiSyncing,setPbiSyncing]= useState(false);
   const esRef = useRef<EventSource | null>(null);
+
+  // PBI sync status — poll every 30s
+  useEffect(() => {
+    let cancelled = false;
+    const fetchStatus = async () => {
+      try {
+        const r = await fetch(`${BASE}/api/faults/pbi-status`);
+        if (!r.ok) return;
+        const data: PbiSyncStatus = await r.json();
+        if (!cancelled) setPbiStatus(data);
+      } catch { /* ignore */ }
+    };
+    fetchStatus();
+    const t = setInterval(fetchStatus, 30_000);
+    return () => { cancelled = true; clearInterval(t); };
+  }, []);
+
+  const handlePbiSync = async () => {
+    setPbiSyncing(true);
+    try {
+      const r = await fetch(`${BASE}/api/faults/pbi-sync`, { method: "POST" });
+      if (r.ok) setPbiStatus(await r.json());
+    } catch { /* ignore */ }
+    finally { setPbiSyncing(false); }
+  };
+
+  const handleFaultAction = async (kind: "dispatch" | "status", status?: FaultStatus) => {
+    if (!selected) return;
+    if (kind === "dispatch") {
+      await postJson(`${BASE}/api/faults/${selected}/dispatch`);
+    } else if (status) {
+      await postJson(`${BASE}/api/faults/${selected}/status`, { status }, "PATCH");
+    }
+  };
 
   // Clock
   useEffect(() => {
@@ -394,6 +570,11 @@ export default function FaultManagement({ onBack }: { onBack: () => void }) {
         </div>
       </div>
 
+      {/* ══ PBI SYNC BAR ══════════════════════════════════════════════════════ */}
+      <div style={{ padding: "8px 14px 0", flexShrink: 0 }}>
+        <PbiSyncBar status={pbiStatus} syncing={pbiSyncing} onSync={handlePbiSync} />
+      </div>
+
       {/* ══ KPI BAR ═══════════════════════════════════════════════════════════ */}
       <div style={{
         display: "flex", gap: 10, padding: "10px 14px",
@@ -454,7 +635,7 @@ export default function FaultManagement({ onBack }: { onBack: () => void }) {
           {selectedFault ? (
             // Detail view
             <div style={{ flex: 1, overflow: "auto" }}>
-              <FaultDetail fault={selectedFault} onClose={() => setSelected(null)} />
+              <FaultDetail fault={selectedFault} onClose={() => setSelected(null)} onAction={handleFaultAction} />
             </div>
           ) : (
             <>

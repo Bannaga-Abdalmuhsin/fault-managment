@@ -34,6 +34,41 @@ export interface RiskCard {
 const activeRiskCards = new Map<string, RiskCard>();
 const sseClients = new Set<Response>();
 
+// ── Sync metadata (exposed via /api/faults/pbi-status) ────────────────────────
+export interface PbiSyncStatus {
+  ok:         boolean;
+  syncedAt:   number | null;
+  powerCount: number;   // last poll's power-ticket count
+  sirCount:   number;   // last poll's NSA-ticket count
+  pbiCount:   number;   // total matched WR-HAJJ sites currently tracked
+  upserted:   number;   // tickets added/updated on last poll
+  closed:     number;   // tickets auto-closed on last poll
+  errors:     string[];
+}
+
+const _syncStatus: PbiSyncStatus = {
+  ok: false, syncedAt: null,
+  powerCount: 0, sirCount: 0, pbiCount: 0,
+  upserted: 0, closed: 0, errors: [],
+};
+
+export function getPbiSyncStatus(): PbiSyncStatus {
+  return { ..._syncStatus, pbiCount: activeRiskCards.size };
+}
+
+// Single-flight guard: prevents manual sync from overlapping scheduled polls.
+let _pollInFlight: Promise<void> | null = null;
+async function pollOnce(): Promise<void> {
+  if (_pollInFlight) return _pollInFlight;
+  _pollInFlight = poll().finally(() => { _pollInFlight = null; });
+  return _pollInFlight;
+}
+
+export async function triggerPbiSync(): Promise<PbiSyncStatus> {
+  await pollOnce();
+  return getPbiSyncStatus();
+}
+
 // ── SSE helpers ───────────────────────────────────────────────────────────────
 export function addSseClient(res: Response) {
   sseClients.add(res);
@@ -55,6 +90,8 @@ function broadcast() {
 
 // ── Poll engine ───────────────────────────────────────────────────────────────
 async function poll() {
+  const _prevIds = new Set(activeRiskCards.keys());
+  let _upserted = 0, _closed = 0;
   try {
     // 1. Fetch open tickets from both tables + area data in parallel
     const [powerRows, nsaRows, areaRows] = await Promise.all([
@@ -187,6 +224,7 @@ async function poll() {
       const areaOverride = (r["[area]"] ?? "").toString().trim();
       const card = buildCard(r, "nsa", { areaOverride });
       if (!card) continue;
+      if (!_prevIds.has(card.siteId)) _upserted++;
       activeRiskCards.set(card.siteId, card);
       incoming.add(card.siteId);
     }
@@ -198,6 +236,7 @@ async function poll() {
       const alarmType: RiskCard["alarmType"] = isPowerAlarm(alarmDescription) ? "power" : "nsa";
       const card = buildCard(r, alarmType, { subcon });
       if (!card) continue;
+      if (!_prevIds.has(card.siteId) && !incoming.has(card.siteId)) _upserted++;
       activeRiskCards.set(card.siteId, card);
       incoming.add(card.siteId);
     }
@@ -206,13 +245,26 @@ async function poll() {
     const now = Date.now();
     for (const [siteId, card] of activeRiskCards) {
       if (!incoming.has(siteId) && card.severity !== "cleared") {
+        _closed++;
         activeRiskCards.set(siteId, { ...card, severity: "cleared", clearedAt: now });
         setTimeout(() => { activeRiskCards.delete(siteId); broadcast(); }, 5_000);
       }
     }
 
+    // 6. Update sync metadata (success)
+    _syncStatus.ok         = true;
+    _syncStatus.syncedAt   = now;
+    _syncStatus.powerCount = powerRows.length;
+    _syncStatus.sirCount   = nsaRows.length;
+    _syncStatus.upserted   = _upserted;
+    _syncStatus.closed     = _closed;
+    _syncStatus.errors     = [];
+
     broadcast();
   } catch (err: any) {
+    _syncStatus.ok       = false;
+    _syncStatus.syncedAt = Date.now();
+    _syncStatus.errors   = [String(err?.message ?? err)];
     logger.error({ err }, "Risk engine poll error");
   }
 }
