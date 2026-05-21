@@ -76,10 +76,10 @@ const COL = {
 
 // ── Build an AdvancedMarkerElement pin as a DOM element ───────────────────────
 function buildPinElement(c: typeof COL.green, pulse: boolean): HTMLElement {
-  // Outer wrapper — flex column, tower + status dot
+  // Outer wrapper — flex column, tower stacked DIRECTLY above status dot
   const wrap = document.createElement("div");
   wrap.style.cssText = `
-    display:flex; flex-direction:column; align-items:center; gap:0;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
     cursor:pointer; position:relative;
   `;
 
@@ -92,9 +92,9 @@ function buildPinElement(c: typeof COL.green, pulse: boolean): HTMLElement {
   `;
   wrap.appendChild(img);
 
-  // Status dot at the base
+  // Status dot — sits cleanly UNDER the tower, horizontally centered
   const dotWrap = document.createElement("div");
-  dotWrap.style.cssText = `position:relative; width:14px; height:14px; margin-top:-4px;`;
+  dotWrap.style.cssText = `position:relative; width:14px; height:14px; margin:0 auto;`;
 
   const dot = document.createElement("div");
   dot.style.cssText = `
