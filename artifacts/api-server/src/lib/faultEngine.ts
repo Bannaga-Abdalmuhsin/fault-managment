@@ -370,9 +370,12 @@ async function poll() {
 
       const etaExpiry = card.etaExpiry ?? (card.assignedTime + card.etaMinutes * 60_000);
 
-      // Real team from PBI — foStaff is the FO engineer, subcon is the subcontractor
-      const assignedTeam = card.foStaff  || card.subcon || card.owner || "Unassigned";
-      const teamId       = card.subcon   || card.foStaff || faultId;
+      // Real team from PBI — matches the Risk Dashboard "Teams" panel.
+      // subcon = field crew dispatched to the site (THE team handling the fault).
+      // owner  = responsible owner (fallback when no subcon is assigned, e.g. SIR/NSA).
+      // foStaff = Front Office desk engineer (coordinator) — NEVER shown as the field team.
+      const assignedTeam = card.subcon || card.owner || "Unassigned";
+      const teamId       = card.subcon || card.owner || faultId;
 
       const fault: FaultRecord = {
         id:                 faultId,
@@ -419,12 +422,24 @@ async function poll() {
       ? Math.max(0, Math.round((card.batteryExpiry - now) / 60_000))
       : fault.backupRemainingMin;
 
+    // Re-sync team from PBI on every tick (corrects historical misassignments
+    // where foStaff was used). Skip when ACES has dispatched a tech — that
+    // assignment ("Tech #N") wins over the PBI-derived team.
+    const pbiTeam   = card.subcon || card.owner || fault.assignedTeam;
+    const pbiTeamId = card.subcon || card.owner || fault.teamId;
+    const acesOwned = fault.assignedTechId != null;
+
     activeFaults.set(card.siteId, {
       ...fault,
       status,
       teamLat,
       teamLng,
       backupRemainingMin,
+      assignedTeam: acesOwned ? fault.assignedTeam : pbiTeam,
+      teamId:       acesOwned ? fault.teamId       : pbiTeamId,
+      foStaff:      card.foStaff || fault.foStaff,
+      subcon:       card.subcon  || fault.subcon,
+      owner:        card.owner   || fault.owner,
       severity: (card.severity === "critical" ? "critical"
         : card.alarmType === "power" ? "major" : "minor") as FaultSeverity,
       arrivedAt:
