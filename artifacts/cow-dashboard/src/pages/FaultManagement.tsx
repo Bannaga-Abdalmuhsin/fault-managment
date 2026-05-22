@@ -22,6 +22,9 @@ export interface FaultRecord {
   foStaff?: string;
   subcon?: string;
   owner?: string;
+  // Optional real road route from backend (Directions API). When absent,
+  // the map falls back to a geodesic straight line team→site.
+  routePolyline?: Array<{ lat: number; lng: number }>;
 }
 
 // ── Palette ───────────────────────────────────────────────────────────────────

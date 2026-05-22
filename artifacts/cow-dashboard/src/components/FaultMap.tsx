@@ -201,7 +201,18 @@ export default function FaultMap({ faults, sites, selectedId, onSelect }: Props)
           font-family:'Segoe UI',system-ui,sans-serif;
           box-shadow:0 0 8px ${teamColor}99;
         `;
-        badge.textContent = `🚐 ${fault.assignedTeam.replace("Team ", "")}`;
+        // Distance from team to site (km) — shown next to team name
+        const siteCoord = siteCoordMap.get(fault.cowId);
+        const distKm = siteCoord
+          ? haversineMeters(fault.teamLat, fault.teamLng, siteCoord.lat, siteCoord.lng) / 1000
+          : null;
+        const distLabel = distKm != null
+          ? (distKm < 1 ? `${Math.round(distKm * 1000)}m` : `${distKm.toFixed(1)}km`)
+          : "";
+        badge.innerHTML = `🚐 ${fault.assignedTeam.replace("Team ", "")}` +
+          (distLabel && (fault.status === "Assigned" || fault.status === "En Route")
+            ? ` <span style="opacity:.85;font-weight:600">· ${distLabel}</span>`
+            : "");
         el.appendChild(badge);
 
         const tri = document.createElement("div");
@@ -228,6 +239,35 @@ export default function FaultMap({ faults, sites, selectedId, onSelect }: Props)
         });
         marker.addListener("gmp-click", () => onSelect(fault.id));
         markersRef.current.push(marker);
+
+        // ── Planned route (team → site) ───────────────────────────────────
+        // Drawn while the team is en route. Uses fault.routePolyline when the
+        // backend supplies a real road route, otherwise falls back to a
+        // geodesic straight line.
+        const inTransit = fault.status === "Assigned" || fault.status === "En Route";
+        if (inTransit && siteCoord) {
+          const path = fault.routePolyline && fault.routePolyline.length > 1
+            ? fault.routePolyline
+            : [{ lat: fault.teamLat, lng: fault.teamLng }, { lat: siteCoord.lat, lng: siteCoord.lng }];
+          const isRealRoute = !!(fault.routePolyline && fault.routePolyline.length > 1);
+          const isSelected = fault.id === selectedId;
+          const plannedLine = new PolylineClass({
+            path,
+            strokeColor:   "#A78BFA", // STC light purple
+            strokeOpacity: isSelected ? 0.75 : 0.4,
+            strokeWeight:  isSelected ? 3 : 2,
+            geodesic:      !isRealRoute,
+            icons: [{
+              icon: { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 2,
+                      strokeColor: "#C4B5FD", strokeOpacity: 1 },
+              offset: "50%",
+              repeat: "80px",
+            }],
+            map,
+            zIndex: 1,
+          });
+          polylinesRef.current.push(plannedLine);
+        }
 
         // ── Movement trail (last ~100 m of actual team movement) ─────────
         // We append every fresh team position to a per-fault breadcrumb list
