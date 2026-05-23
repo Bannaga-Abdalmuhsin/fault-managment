@@ -367,6 +367,139 @@ function PbiSyncBar({ status, syncing, onSync }: {
   );
 }
 
+// ── WhatsApp hourly update generator ──────────────────────────────────────────
+function buildWhatsAppUpdate(
+  active: FaultRecord[],
+  history: FaultRecord[],
+  sites: PbiSite[],
+): string {
+  const now = new Date();
+  const hh  = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const dd  = now.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+
+  // Bucket active faults by area (fall back to site area, then "Unassigned")
+  const siteAreaById = new Map<string, string>();
+  for (const s of sites) if (s.area) siteAreaById.set(s.id, s.area);
+
+  const areaOf = (f: FaultRecord) =>
+    (f.area && f.area.trim()) || siteAreaById.get(f.cowId) || "Unassigned";
+
+  const byArea = new Map<string, FaultRecord[]>();
+  for (const f of active) {
+    const a = areaOf(f);
+    const arr = byArea.get(a) ?? [];
+    arr.push(f);
+    byArea.set(a, arr);
+  }
+
+  // All known areas — include "clear" areas too, so the report covers everything
+  const allAreas = new Set<string>(byArea.keys());
+  for (const s of sites) if (s.area) allAreas.add(s.area);
+  const sortedAreas = [...allAreas].sort();
+
+  const critical = active.filter(f => f.severity === "critical").length;
+  const enRoute  = active.filter(f => f.status === "En Route").length;
+  const onSite   = active.filter(f => f.status === "Arrived" || f.status === "Working").length;
+  const resolvedToday = history.filter(f => f.status === "Resolved" || f.status === "Closed").length;
+
+  const lines: string[] = [];
+  lines.push(`*COW HAJJ 1447 — Hourly Update*`);
+  lines.push(`🕐 ${hh}  ·  📅 ${dd}`);
+  lines.push("");
+  lines.push(`📊 Active: *${active.length}*  ·  🔴 Critical: ${critical}  ·  🚐 En Route: ${enRoute}  ·  🛠 On Site: ${onSite}`);
+  lines.push(`✅ Resolved today: ${resolvedToday}`);
+  lines.push("");
+
+  for (const area of sortedAreas) {
+    const items = byArea.get(area) ?? [];
+    lines.push(`📍 *${area}*`);
+    if (items.length === 0) {
+      lines.push(`   ✅ All clear`);
+    } else {
+      // Sort: critical → major → minor → monitoring
+      const sevOrd = ["critical", "major", "minor", "monitoring"];
+      items.sort((a, b) => sevOrd.indexOf(a.severity) - sevOrd.indexOf(b.severity));
+      for (const f of items) {
+        const sev = f.severity.toUpperCase();
+        const etaLeft = f.status === "En Route"
+          ? Math.max(0, Math.round((f.etaExpiry - Date.now()) / 60_000))
+          : null;
+        const etaTxt = etaLeft != null ? ` · ETA ${etaLeft}m` : "";
+        lines.push(`   • ${f.cowId} — ${f.alarm} (${sev}) — ${f.status}${etaTxt} · ${f.assignedTeam}`);
+      }
+    }
+    lines.push("");
+  }
+
+  lines.push(`— STC NOC · auto-generated ${hh}`);
+  return lines.join("\n");
+}
+
+function WhatsAppUpdateModal({ text, onClose }: { text: string; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch { /* ignore */ }
+  };
+  return (
+    <div onClick={onClose} style={{
+      position: "fixed", inset: 0, background: "rgba(20,0,42,.72)",
+      backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+      zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 20,
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: P.glass, backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)",
+        border: `1px solid ${P.glassBorder}`, borderRadius: 14,
+        width: "min(640px, 100%)", maxHeight: "82vh", display: "flex", flexDirection: "column",
+        boxShadow: "0 20px 60px rgba(0,0,0,.55)",
+      }}>
+        <div style={{
+          padding: "12px 16px", display: "flex", alignItems: "center", gap: 10,
+          borderBottom: `1px solid ${P.glassBorder}`,
+        }}>
+          <span style={{ fontSize: 16 }}>💬</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#fff", letterSpacing: .5 }}>
+              WhatsApp Hourly Update
+            </div>
+            <div style={{ fontSize: 10.5, color: "rgba(200,140,255,.7)" }}>
+              Ready to paste into STC NOC group
+            </div>
+          </div>
+          <button onClick={handleCopy} style={{
+            background: copied ? "rgba(0,200,120,.25)" : "rgba(124,58,237,.55)",
+            color: "#fff", border: `1px solid ${copied ? P.green : P.glassBorder}`,
+            borderRadius: 8, padding: "5px 14px", fontSize: 12, fontWeight: 800,
+            cursor: "pointer", transition: "all .15s",
+          }}>
+            {copied ? "✓ Copied" : "📋 Copy"}
+          </button>
+          <button onClick={onClose} style={{
+            background: "rgba(255,255,255,.08)", color: "#fff",
+            border: `1px solid ${P.glassBorder}`, borderRadius: 8,
+            padding: "5px 10px", fontSize: 12, cursor: "pointer",
+          }}>
+            ✕
+          </button>
+        </div>
+        <pre style={{
+          margin: 0, padding: "14px 18px", overflow: "auto",
+          fontFamily: "'Segoe UI', system-ui, sans-serif",
+          fontSize: 12.5, lineHeight: 1.55, color: "#fff",
+          whiteSpace: "pre-wrap", wordBreak: "break-word",
+          background: "rgba(0,0,0,.18)",
+        }}>
+          {text}
+        </pre>
+      </div>
+    </div>
+  );
+}
+
 // ── Manual action buttons (STC purple glass) ──────────────────────────────────
 function ActionButton({ label, color, onClick }: { label: string; color: string; onClick: () => void }) {
   return (
@@ -407,6 +540,7 @@ export default function FaultManagement({ onBack }: { onBack: () => void }) {
   const [connected, setConnected] = useState(false);
   const [pbiStatus, setPbiStatus] = useState<PbiSyncStatus | null>(null);
   const [pbiSyncing,setPbiSyncing]= useState(false);
+  const [showUpdate,setShowUpdate]= useState(false);
   const esRef = useRef<EventSource | null>(null);
 
   // PBI sync status — poll every 30s
@@ -556,6 +690,20 @@ export default function FaultManagement({ onBack }: { onBack: () => void }) {
             COW HAJJ 1447 — NOC DISPATCH MIRROR
           </div>
         </div>
+
+        {/* Hourly WhatsApp update */}
+        <button
+          onClick={() => setShowUpdate(true)}
+          title="Generate hourly WhatsApp summary"
+          style={{
+            background: "rgba(37,211,102,.18)", border: "1px solid rgba(37,211,102,.45)",
+            color: "#25D366", borderRadius: 8, padding: "5px 12px",
+            fontSize: 12, fontWeight: 800, cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 6, letterSpacing: .3,
+          }}
+        >
+          💬 Hourly Update
+        </button>
 
         {/* Live indicator */}
         <div style={{ display: "flex", alignItems: "center", gap: 7,
@@ -708,6 +856,14 @@ export default function FaultManagement({ onBack }: { onBack: () => void }) {
           )}
         </div>
       </div>
+
+      {/* ══ WhatsApp Hourly Update modal ═══════════════════════════════════════ */}
+      {showUpdate && (
+        <WhatsAppUpdateModal
+          text={buildWhatsAppUpdate(faults, history, sites)}
+          onClose={() => setShowUpdate(false)}
+        />
+      )}
 
       <style>{`
         @keyframes pulse {
