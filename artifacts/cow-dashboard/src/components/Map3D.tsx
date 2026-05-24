@@ -194,8 +194,25 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
         tilt:            view.tilt,
         mapTypeId:       "hybrid" as google.maps.MapTypeId,
         disableDefaultUI: true,
-        // "DEMO_MAP_ID" is Google's built-in test map ID — enables AdvancedMarkerElement
-        mapId:           "DEMO_MAP_ID",
+        // NOTE: mapId intentionally omitted — with a mapId set, JS `styles`
+        // are ignored (cloud styling takes over) and we lose POI hiding.
+        // AdvancedMarkerElement still renders without it (just a dev warning).
+        // ── Hide business/POI clutter — keep streets + admin areas only ──
+        styles: [
+          // Hide all POI icons + labels (restaurants, shops, attractions, etc.)
+          { featureType: "poi",            stylers: [{ visibility: "off" }] },
+          { featureType: "poi.business",   stylers: [{ visibility: "off" }] },
+          { featureType: "poi.attraction", stylers: [{ visibility: "off" }] },
+          { featureType: "poi.medical",    stylers: [{ visibility: "off" }] },
+          { featureType: "poi.school",     stylers: [{ visibility: "off" }] },
+          { featureType: "poi.sports_complex", stylers: [{ visibility: "off" }] },
+          // Hide transit (bus stops, stations) as well — pure street view
+          { featureType: "transit",        stylers: [{ visibility: "off" }] },
+          // Keep roads + admin areas (districts / neighborhood labels) visible
+          { featureType: "road",                  elementType: "labels", stylers: [{ visibility: "on" }] },
+          { featureType: "administrative",        elementType: "labels", stylers: [{ visibility: "on" }] },
+          { featureType: "administrative.locality", elementType: "labels.text", stylers: [{ visibility: "on" }] },
+        ],
       });
 
       // Selectively re-enable controls
