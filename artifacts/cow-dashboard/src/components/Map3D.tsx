@@ -194,10 +194,13 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
         tilt:            view.tilt,
         mapTypeId:       "hybrid" as google.maps.MapTypeId,
         disableDefaultUI: true,
-        // NOTE: mapId intentionally omitted — with a mapId set, JS `styles`
-        // are ignored (cloud styling takes over) and we lose POI hiding.
-        // AdvancedMarkerElement still renders without it (just a dev warning).
+        // "DEMO_MAP_ID" is Google's built-in test map ID — required for
+        // AdvancedMarkerElement to render (without it the cow-tower icons
+        // silently disappear).
+        mapId:           "DEMO_MAP_ID",
         // ── Hide business/POI clutter — keep streets + admin areas only ──
+        // NOTE: on vector maps with a cloud-styled mapId these JS styles can
+        // be ignored. DEMO_MAP_ID has no cloud style, so they apply here.
         styles: [
           // Hide all POI icons + labels (restaurants, shops, attractions, etc.)
           { featureType: "poi",            stylers: [{ visibility: "off" }] },
