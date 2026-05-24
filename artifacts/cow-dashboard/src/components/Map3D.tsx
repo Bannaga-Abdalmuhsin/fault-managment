@@ -160,11 +160,20 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
   const sitesRef      = useRef(sites);
   sitesRef.current    = sites;
 
+  // Google Maps overlay layers (created lazily on first toggle)
+  const trafficLayerRef   = useRef<google.maps.TrafficLayer   | null>(null);
+  const transitLayerRef   = useRef<google.maps.TransitLayer   | null>(null);
+  const bicyclingLayerRef = useRef<google.maps.BicyclingLayer | null>(null);
+
   const [selected, setSelected]     = useState<SelectedSite | null>(null);
   const [updateTime, setUpdateTime] = useState(fmtTime());
   // User-facing map type. "satellite" + showLabels=true => effective "hybrid".
   const [mapType, setMapType]       = useState<"satellite" | "roadmap" | "terrain">("satellite");
   const [showLabels, setShowLabels] = useState(true);
+  // Overlay layer toggles
+  const [trafficOn,   setTrafficOn]   = useState(false);
+  const [transitOn,   setTransitOn]   = useState(false);
+  const [bicyclingOn, setBicyclingOn] = useState(false);
 
   useEffect(() => {
     if (!selected) return;
@@ -267,6 +276,38 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
       : mapType;
     mapRef.current?.setMapTypeId(effective as google.maps.MapTypeId);
   }, [mapType, showLabels]);
+
+  // ── Overlay layers (Traffic / Transit / Bicycling) ───────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (trafficOn) {
+      if (!trafficLayerRef.current) trafficLayerRef.current = new google.maps.TrafficLayer();
+      trafficLayerRef.current.setMap(map);
+    } else {
+      trafficLayerRef.current?.setMap(null);
+    }
+  }, [trafficOn]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (transitOn) {
+      if (!transitLayerRef.current) transitLayerRef.current = new google.maps.TransitLayer();
+      transitLayerRef.current.setMap(map);
+    } else {
+      transitLayerRef.current?.setMap(null);
+    }
+  }, [transitOn]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (bicyclingOn) {
+      if (!bicyclingLayerRef.current) bicyclingLayerRef.current = new google.maps.BicyclingLayer();
+      bicyclingLayerRef.current.setMap(map);
+    } else {
+      bicyclingLayerRef.current?.setMap(null);
+    }
+  }, [bicyclingOn]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const clearMarkers = useCallback(() => {
@@ -374,41 +415,91 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
           </select>
         </div>
 
-        {/* Satellite labels checkbox — only meaningful in Satellite mode */}
-        <label
-          title={mapType === "satellite"
-            ? "Toggle place / road labels on satellite imagery"
-            : "Labels are always shown on Road and Terrain maps"}
-          style={{
-            background:"rgba(6,0,16,0.84)",
-            backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
-            border:"1px solid rgba(200,140,255,0.22)",
-            borderRadius:10, padding:"6px 10px",
-            display:"flex", alignItems:"center", gap:7,
-            boxShadow:"0 4px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
-            cursor: mapType === "satellite" ? "pointer" : "not-allowed",
-            opacity: mapType === "satellite" ? 1 : 0.45,
-            userSelect:"none",
-          }}
-        >
-          <input
-            type="checkbox"
-            checked={mapType === "satellite" ? showLabels : true}
-            disabled={mapType !== "satellite"}
-            onChange={e => setShowLabels(e.target.checked)}
-            style={{
-              width:13, height:13, margin:0,
-              accentColor:"#a78bfa",
-              cursor: mapType === "satellite" ? "pointer" : "not-allowed",
-            }}
-          />
-          <span style={{
-            fontSize:11, fontWeight:700, color:"#ded0f5",
-            letterSpacing:"0.03em", whiteSpace:"nowrap",
+        {/* Layers panel — Satellite labels + Google overlay layers */}
+        <div style={{
+          background:"rgba(6,0,16,0.84)",
+          backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
+          border:"1px solid rgba(200,140,255,0.22)",
+          borderRadius:10, padding:"8px 11px",
+          display:"flex", flexDirection:"column", gap:6,
+          boxShadow:"0 4px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
+          minWidth:160,
+        }}>
+          <div style={{
+            fontSize:10, fontWeight:800, letterSpacing:"0.12em",
+            color:"rgba(200,140,255,0.75)", textTransform:"uppercase",
+            marginBottom:1,
           }}>
-            Satellite labels
-          </span>
-        </label>
+            Layers
+          </div>
+
+          {([
+            {
+              key:"labels", icon:"🏷",
+              label:"Satellite labels",
+              checked: mapType === "satellite" ? showLabels : true,
+              disabled: mapType !== "satellite",
+              onChange: (v: boolean) => setShowLabels(v),
+              tip: mapType === "satellite"
+                ? "Toggle place / road labels on satellite imagery"
+                : "Labels are always shown on Road and Terrain maps",
+            },
+            {
+              key:"traffic", icon:"🚦",
+              label:"Traffic",
+              checked: trafficOn,
+              disabled: false,
+              onChange: (v: boolean) => setTrafficOn(v),
+              tip:"Live road traffic conditions",
+            },
+            {
+              key:"transit", icon:"🚌",
+              label:"Transit",
+              checked: transitOn,
+              disabled: false,
+              onChange: (v: boolean) => setTransitOn(v),
+              tip:"Public transit lines and stations",
+            },
+            {
+              key:"bicycling", icon:"🚴",
+              label:"Bicycling",
+              checked: bicyclingOn,
+              disabled: false,
+              onChange: (v: boolean) => setBicyclingOn(v),
+              tip:"Bike lanes and trails",
+            },
+          ] as const).map(({ key, icon, label, checked, disabled, onChange, tip }) => (
+            <label
+              key={key}
+              title={tip}
+              style={{
+                display:"flex", alignItems:"center", gap:7,
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.45 : 1,
+                userSelect:"none",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={disabled}
+                onChange={e => onChange(e.target.checked)}
+                style={{
+                  width:13, height:13, margin:0,
+                  accentColor:"#a78bfa",
+                  cursor: disabled ? "not-allowed" : "pointer",
+                }}
+              />
+              <span style={{ fontSize:12 }}>{icon}</span>
+              <span style={{
+                fontSize:11, fontWeight:700, color:"#ded0f5",
+                letterSpacing:"0.03em", whiteSpace:"nowrap",
+              }}>
+                {label}
+              </span>
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* ── Legend — bottom-right glassmorphism panel ─────────────── */}
