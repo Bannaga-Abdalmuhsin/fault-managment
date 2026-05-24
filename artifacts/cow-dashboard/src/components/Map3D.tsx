@@ -162,8 +162,9 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
 
   const [selected, setSelected]     = useState<SelectedSite | null>(null);
   const [updateTime, setUpdateTime] = useState(fmtTime());
-  const [mapType, setMapType]       = useState<"hybrid" | "roadmap" | "terrain">("hybrid");
-  const [is3D, setIs3D]             = useState(true);
+  // User-facing map type. "satellite" + showLabels=true => effective "hybrid".
+  const [mapType, setMapType]       = useState<"satellite" | "roadmap" | "terrain">("satellite");
+  const [showLabels, setShowLabels] = useState(true);
 
   useEffect(() => {
     if (!selected) return;
@@ -258,18 +259,14 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
   }, [sites]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Map type switcher ────────────────────────────────────────────────────
+  // "satellite" + labels-on ⇒ "hybrid" (Google's name for satellite+labels).
+  // Roadmap and terrain always include labels.
   useEffect(() => {
-    mapRef.current?.setMapTypeId(mapType);
-  }, [mapType]);
-
-  // ── 3D / 2D toggle ───────────────────────────────────────────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const v = AREA_VIEWS[areaFilter] ?? AREA_VIEWS.All;
-    map.moveCamera({ tilt: is3D ? v.tilt : 0, heading: is3D ? v.heading : 0 });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [is3D]);
+    const effective = mapType === "satellite"
+      ? (showLabels ? "hybrid" : "satellite")
+      : mapType;
+    mapRef.current?.setMapTypeId(effective as google.maps.MapTypeId);
+  }, [mapType, showLabels]);
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const clearMarkers = useCallback(() => {
@@ -340,65 +337,78 @@ export default function Map3D({ sites, areaFilter }: Map3DProps) {
         position:"absolute", bottom:26, left:10, zIndex:20,
         display:"flex", flexDirection:"column", gap:6, alignItems:"flex-start",
       }}>
-        {/* Map type */}
+        {/* Map terrain dropdown */}
         <div style={{
           background:"rgba(6,0,16,0.84)",
           backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
           border:"1px solid rgba(200,140,255,0.22)",
-          borderRadius:10, padding:"4px 5px",
-          display:"flex", gap:3,
+          borderRadius:10, padding:"5px 9px",
+          display:"flex", alignItems:"center", gap:8,
           boxShadow:"0 4px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}>
-          {([
-            { id:"hybrid",  icon:"🛰", label:"Satellite" },
-            { id:"roadmap", icon:"🗺", label:"Road"      },
-            { id:"terrain", icon:"⛰", label:"Terrain"   },
-          ] as const).map(({ id, icon, label }) => (
-            <button key={id} onClick={() => setMapType(id)} title={label}
-              style={{
-                background: mapType===id ? "rgba(200,140,255,0.25)" : "transparent",
-                border:     mapType===id ? "1px solid rgba(200,140,255,0.48)" : "1px solid transparent",
-                borderRadius:7,
-                color:      mapType===id ? "#ded0f5" : "rgba(255,255,255,0.5)",
-                cursor:"pointer", fontSize:11, fontWeight:700,
-                padding:"4px 9px",
-                display:"flex", alignItems:"center", gap:4,
-                transition:"all 0.15s", whiteSpace:"nowrap",
-                letterSpacing:"0.03em",
-              }}>
-              <span style={{ fontSize:13 }}>{icon}</span>{label}
-            </button>
-          ))}
+          <span style={{
+            fontSize:10, fontWeight:800, letterSpacing:"0.12em",
+            color:"rgba(200,140,255,0.75)", textTransform:"uppercase",
+          }}>
+            Map
+          </span>
+          <select
+            value={mapType}
+            onChange={e => setMapType(e.target.value as "satellite" | "roadmap" | "terrain")}
+            style={{
+              background:"rgba(78,0,142,0.45)",
+              color:"#ded0f5",
+              border:"1px solid rgba(200,140,255,0.4)",
+              borderRadius:7,
+              padding:"4px 8px",
+              fontSize:11, fontWeight:700,
+              cursor:"pointer",
+              outline:"none",
+              letterSpacing:"0.03em",
+              fontFamily:"inherit",
+            }}
+          >
+            <option value="satellite" style={{ background:"#1a0033", color:"#fff" }}>🛰 Satellite</option>
+            <option value="roadmap"   style={{ background:"#1a0033", color:"#fff" }}>🗺 Road</option>
+            <option value="terrain"   style={{ background:"#1a0033", color:"#fff" }}>⛰ Terrain</option>
+          </select>
         </div>
 
-        {/* 3D / 2D toggle */}
-        <div style={{
-          background:"rgba(6,0,16,0.84)",
-          backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
-          border:"1px solid rgba(200,140,255,0.22)",
-          borderRadius:10, padding:"4px 5px",
-          display:"flex", gap:3,
-          boxShadow:"0 4px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
-        }}>
-          {([
-            { v:true,  label:"3D", tip:"Tilted 3D view" },
-            { v:false, label:"2D", tip:"Flat top-down view" },
-          ] as const).map(({ v, label, tip }) => (
-            <button key={label} onClick={() => setIs3D(v)} title={tip}
-              style={{
-                background: is3D===v ? "rgba(78,0,142,0.55)" : "transparent",
-                border:     is3D===v ? "1px solid rgba(200,140,255,0.5)" : "1px solid transparent",
-                borderRadius:7,
-                color:      is3D===v ? "#ded0f5" : "rgba(255,255,255,0.5)",
-                cursor:"pointer", fontSize:12, fontWeight:800,
-                padding:"4px 14px",
-                transition:"all 0.15s",
-                letterSpacing:"0.06em",
-              }}>
-              {label}
-            </button>
-          ))}
-        </div>
+        {/* Satellite labels checkbox — only meaningful in Satellite mode */}
+        <label
+          title={mapType === "satellite"
+            ? "Toggle place / road labels on satellite imagery"
+            : "Labels are always shown on Road and Terrain maps"}
+          style={{
+            background:"rgba(6,0,16,0.84)",
+            backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)",
+            border:"1px solid rgba(200,140,255,0.22)",
+            borderRadius:10, padding:"6px 10px",
+            display:"flex", alignItems:"center", gap:7,
+            boxShadow:"0 4px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)",
+            cursor: mapType === "satellite" ? "pointer" : "not-allowed",
+            opacity: mapType === "satellite" ? 1 : 0.45,
+            userSelect:"none",
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={mapType === "satellite" ? showLabels : true}
+            disabled={mapType !== "satellite"}
+            onChange={e => setShowLabels(e.target.checked)}
+            style={{
+              width:13, height:13, margin:0,
+              accentColor:"#a78bfa",
+              cursor: mapType === "satellite" ? "pointer" : "not-allowed",
+            }}
+          />
+          <span style={{
+            fontSize:11, fontWeight:700, color:"#ded0f5",
+            letterSpacing:"0.03em", whiteSpace:"nowrap",
+          }}>
+            Satellite labels
+          </span>
+        </label>
       </div>
 
       {/* ── Legend — bottom-right glassmorphism panel ─────────────── */}
