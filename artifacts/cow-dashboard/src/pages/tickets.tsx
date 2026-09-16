@@ -10,7 +10,7 @@ import { Plus, Filter, Search, RefreshCw } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { TicketDrawer } from "@/components/ticket-drawer";
 import { useQueryClient } from "@tanstack/react-query";
-import type { ListTicketsType, ListTicketsStatus, ListTicketsPriority } from "@workspace/api-client-react/src/generated/api.schemas";
+import type { ListTicketsType, ListTicketsStatus, ListTicketsPriority } from "@workspace/api-client-react";
 
 export default function Tickets() {
   const [search, setSearch] = useState("");

@@ -358,7 +358,7 @@ async function poll() {
     const coord = siteCoords.get(card.siteId);
     const [siteLat, siteLng] = coord
       ? [coord.lat, coord.lng]
-      : getAreaCenter(card.area ?? "");
+      : getAreaCenter("");
     const area = coord?.area ?? card.siteId;
 
     if (!_siteToFault.has(card.siteId)) {

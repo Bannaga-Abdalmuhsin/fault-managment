@@ -57,7 +57,7 @@ router.post("/tickets", async (req, res) => {
 
 router.get("/tickets/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const [ticket] = await db
     .select({
@@ -78,13 +78,13 @@ router.get("/tickets/:id", async (req, res) => {
     .leftJoin(sitesTable, eq(ticketsTable.siteId, sitesTable.id))
     .where(eq(ticketsTable.id, id));
 
-  if (!ticket) return res.status(404).json({ error: "Ticket not found" });
+  if (!ticket) { res.status(404).json({ error: "Ticket not found" }); return; }
   res.json(ticket);
 });
 
 router.patch("/tickets/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const body = req.body;
 
   const [ticket] = await db
@@ -100,7 +100,7 @@ router.patch("/tickets/:id", async (req, res) => {
     .where(eq(ticketsTable.id, id))
     .returning();
 
-  if (!ticket) return res.status(404).json({ error: "Ticket not found" });
+  if (!ticket) { res.status(404).json({ error: "Ticket not found" }); return; }
   const [site] = await db.select().from(sitesTable).where(eq(sitesTable.id, ticket.siteId));
   res.json({ ...ticket, siteName: site?.name ?? "" });
 });

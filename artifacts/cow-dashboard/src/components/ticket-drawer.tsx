@@ -3,7 +3,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { 
-  useGetTicket, 
+  useGetTicket,
+  getGetTicketQueryKey,
+  getListSitesQueryKey,
   useCreateTicket, 
   useUpdateTicket, 
   useListSites,
@@ -48,9 +50,9 @@ interface TicketDrawerProps {
 
 export function TicketDrawer({ open, onOpenChange, ticketId, isNew = false }: TicketDrawerProps) {
   const { data: ticket, isLoading: loadingTicket } = useGetTicket(ticketId || 0, {
-    query: { enabled: !!ticketId && !isNew }
+    query: { queryKey: getGetTicketQueryKey(ticketId || 0), enabled: !!ticketId && !isNew }
   });
-  const { data: sites } = useListSites({ query: { enabled: open } });
+  const { data: sites } = useListSites({ query: { queryKey: getListSitesQueryKey(), enabled: open } });
   
   const createMutation = useCreateTicket();
   const updateMutation = useUpdateTicket();

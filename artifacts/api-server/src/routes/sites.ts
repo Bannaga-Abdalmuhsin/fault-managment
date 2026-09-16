@@ -28,15 +28,15 @@ router.post("/sites", async (req, res) => {
 
 router.get("/sites/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const [site] = await db.select().from(sitesTable).where(eq(sitesTable.id, id));
-  if (!site) return res.status(404).json({ error: "Site not found" });
+  if (!site) { res.status(404).json({ error: "Site not found" }); return; }
   res.json(site);
 });
 
 router.patch("/sites/:id", async (req, res) => {
   const id = parseInt(req.params.id);
-  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
   const body = req.body;
   const [site] = await db
     .update(sitesTable)
@@ -53,7 +53,7 @@ router.patch("/sites/:id", async (req, res) => {
     })
     .where(eq(sitesTable.id, id))
     .returning();
-  if (!site) return res.status(404).json({ error: "Site not found" });
+  if (!site) { res.status(404).json({ error: "Site not found" }); return; }
   res.json(site);
 });
 
@@ -70,7 +70,7 @@ router.patch("/sites/by-name/:name/power", async (req, res) => {
     })
     .where(eq(sitesTable.name, name))
     .returning();
-  if (!site) return res.status(404).json({ error: "Site not found" });
+  if (!site) { res.status(404).json({ error: "Site not found" }); return; }
   res.json(site);
 });
 

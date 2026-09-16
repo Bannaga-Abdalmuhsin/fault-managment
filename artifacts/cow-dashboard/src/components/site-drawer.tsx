@@ -1,4 +1,4 @@
-import { useGetSite, useListTickets } from "@workspace/api-client-react";
+import { useGetSite, useListTickets, getGetSiteQueryKey, getListTicketsQueryKey } from "@workspace/api-client-react";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerClose } from "@/components/ui/drawer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,12 +13,12 @@ interface SiteDrawerProps {
 
 export function SiteDrawer({ open, onOpenChange, siteId }: SiteDrawerProps) {
   const { data: site, isLoading: loadingSite } = useGetSite(siteId, {
-    query: { enabled: !!siteId && open }
+    query: { queryKey: getGetSiteQueryKey(siteId), enabled: !!siteId && open }
   });
   
   const { data: tickets, isLoading: loadingTickets } = useListTickets(
     { siteId }, 
-    { query: { enabled: !!siteId && open } }
+    { query: { queryKey: getListTicketsQueryKey({ siteId }), enabled: !!siteId && open } }
   );
 
   if (loadingSite && !site) {
