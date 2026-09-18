@@ -5,6 +5,7 @@ import Login from "@/pages/Login";
 import FaultManagement from "@/pages/FaultManagement";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const DESIGN_PREVIEW = import.meta.env.VITE_DESIGN_PREVIEW === "true";
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchInterval: 60_000 } },
@@ -28,6 +29,7 @@ export default function App() {
   const [page, setPage] = useState<Page>("dashboard");
 
   useEffect(() => {
+    if (DESIGN_PREVIEW) { setAuthState("authenticated"); return; }
     const token = sessionStorage.getItem("cow_token");
     if (!token) { setAuthState("unauthenticated"); return; }
     verifyToken(token).then(ok =>
@@ -57,7 +59,7 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       {page === "faults"
         ? <FaultManagement onBack={() => setPage("dashboard")} />
-        : <Dashboard onNavigate={(p: Page) => setPage(p)} />
+        : <Dashboard preview={DESIGN_PREVIEW} onNavigate={DESIGN_PREVIEW ? undefined : (p: Page) => setPage(p)} />
       }
     </QueryClientProvider>
   );
