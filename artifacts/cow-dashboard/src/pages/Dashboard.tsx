@@ -618,7 +618,7 @@ export default function Dashboard({ onNavigate, preview = false }: { onNavigate?
         padding: "0 18px", display: "flex", alignItems: "center", gap: 14,
         flexShrink: 0, height: 54, boxShadow: "0 3px 20px rgba(78,0,142,0.6)" }}>
 
-        <img src="/stc-logo.png" alt="STC" style={{ height: 34, objectFit: "contain" }} />
+        <img src={`${BASE}/stc-logo.png`} alt="STC" style={{ height: 34, objectFit: "contain" }} />
 
         <div style={{ background: "rgba(255,255,255,0.08)", border: `1px solid ${P.glassBorder}`,
           borderRadius: 8, padding: "3px 12px", fontSize: 12, color: "#fff", lineHeight: 1.6 }}>
@@ -659,7 +659,7 @@ export default function Dashboard({ onNavigate, preview = false }: { onNavigate?
           <span style={{ color: P.green, fontSize: 13, fontWeight: 800 }}>{preview ? "DESIGN PREVIEW · NO LIVE DATA" : "LIVE"}</span>
         </div>
 
-        <img src="/aces-logo-login.png" alt="ACES Managed Services"
+        <img src={`${BASE}/aces-logo-login.png`} alt="ACES Managed Services"
           style={{ height: 48, objectFit: "contain", mixBlendMode: "screen" }} />
 
         {!preview && <button
@@ -692,10 +692,10 @@ export default function Dashboard({ onNavigate, preview = false }: { onNavigate?
         <div style={{ position: "absolute", top: -17, left: "50%", transform: "translateX(-50%)",
           zIndex: 950, pointerEvents: "none",
           display: "flex", alignItems: "flex-start", gap: 0 }}>
-          <img src="/hajj-icon-nobg.png" alt="Hajj"
+          <img src={`${BASE}/hajj-icon-nobg.png`} alt="Hajj"
             style={{ height: 140, objectFit: "contain",
               filter: "brightness(2.2) sepia(0.3) saturate(2.2) drop-shadow(0 2px 12px rgba(0,0,0,0.7))" }} />
-          <img src="/kaaba-icon.png" alt="Kaaba"
+          <img src={`${BASE}/kaaba-icon.png`} alt="Kaaba"
             style={{ height: 112, objectFit: "contain", marginTop: 30,
               filter: "drop-shadow(0 2px 14px rgba(0,0,0,0.8))" }} />
         </div>
@@ -705,7 +705,7 @@ export default function Dashboard({ onNavigate, preview = false }: { onNavigate?
         <div style={{ position: "absolute", top: 13, right: "calc(50% + 150px)",
           zIndex: 950, pointerEvents: "none" }}>
           <div style={{ position: "relative", width: 140, height: 140 }}>
-            <img src="/cow-truck-icon.png" alt="COW Truck"
+            <img src={`${BASE}/cow-truck-icon.png`} alt="COW Truck"
               style={{ height: 140, width: 140, objectFit: "contain",
                 filter: "brightness(0) invert(1) drop-shadow(0 2px 10px rgba(0,0,0,0.8))" }} />
           </div>
