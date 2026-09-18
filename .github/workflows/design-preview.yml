@@ -22,6 +22,8 @@ jobs:
           node-version: '22'
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Build shared type definitions
+        run: pnpm run typecheck:libs
       - name: Typecheck dashboard
         run: pnpm --filter @workspace/cow-dashboard run typecheck
       - name: Build empty-data design preview
