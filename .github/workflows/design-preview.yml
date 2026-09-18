@@ -1,0 +1,32 @@
+name: Fault dashboard preview build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Typecheck dashboard
+        run: pnpm --filter @workspace/cow-dashboard run typecheck
+      - name: Build empty-data design preview
+        env:
+          PORT: '3000'
+          BASE_PATH: '/fault-managment/'
+          VITE_DESIGN_PREVIEW: 'true'
+        run: pnpm --filter @workspace/cow-dashboard run build
