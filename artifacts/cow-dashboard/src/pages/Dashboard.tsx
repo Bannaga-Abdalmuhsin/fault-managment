@@ -51,9 +51,9 @@ interface PbiZone { district: string; total: number; onAir: number; }
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 // ─── Data hook ─────────────────────────────────────────────────────────────────
-function usePbi<T>(path: string, interval = 60_000) {
+function usePbi<T>(path: string, interval = 60_000, enabled = true) {
   const [data, setData]       = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
   const load = useCallback(async () => {
     try {
       const r = await fetch(`${BASE}/api${path}`);
@@ -63,10 +63,11 @@ function usePbi<T>(path: string, interval = 60_000) {
     finally { setLoading(false); }
   }, [path]);
   useEffect(() => {
+    if (!enabled) return;
     load();
     const id = setInterval(load, interval);
     return () => clearInterval(id);
-  }, [load, interval]);
+  }, [load, interval, enabled]);
   return { data, loading };
 }
 
@@ -144,9 +145,10 @@ interface RiskCard {
 }
 
 // ─── SSE hook ──────────────────────────────────────────────────────────────────
-function useRiskCards(): RiskCard[] {
+function useRiskCards(enabled = true): RiskCard[] {
   const [cards, setCards] = useState<RiskCard[]>([]);
   useEffect(() => {
+    if (!enabled) return;
     let es: EventSource;
     function connect() {
       es = new EventSource(`${BASE}/api/risk/stream`);
@@ -160,7 +162,7 @@ function useRiskCards(): RiskCard[] {
     }
     connect();
     return () => es?.close();
-  }, []);
+  }, [enabled]);
   return cards;
 }
 
@@ -326,7 +328,7 @@ function ZoneBar({ label, total, onAir }: { label: string; total: number; onAir:
           borderRadius: 3, transition: "width 0.6s ease" }} />
       </div>
       <div style={{ fontSize: 10, color: "rgba(255,255,255,0.55)" }}>
-        {noData ? "loading…" : `${onAir} / ${total} on-air`}
+        {noData ? "No site data" : `${onAir} / ${total} on-air`}
       </div>
     </div>
   );
@@ -478,7 +480,7 @@ function NsaTicketRow({ ticket, idx }: { ticket: PbiTicket; idx: number }) {
 }
 
 // ─── Power ticket table ────────────────────────────────────────────────────────
-function PowerTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading: boolean }) {
+function PowerTicketTable({ tickets, loading, preview }: { tickets: PbiTicket[]; loading: boolean; preview: boolean }) {
   const cols = ["Site","#Physical","District","Site label","Total Duration","Time to SLA Breach","Remaining SAL (Min)","Alarms Description","Comment"];
   const empty = !loading && tickets.length === 0;
   return (
@@ -488,14 +490,14 @@ function PowerTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading:
       {loading
         ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: 12, padding: 14 }}>Loading…</td></tr>
         : empty
-          ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 8, fontWeight: 600 }}>✓ No active power tickets</td></tr>
+          ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 8, fontWeight: 600 }}>{preview ? "No data connected" : "✓ No active power tickets"}</td></tr>
           : tickets.map((t, i) => <PowerTicketRow key={`${t.id}-${i}`} ticket={t} idx={i} />)}
     </TableShell>
   );
 }
 
 // ─── NSA ticket table ──────────────────────────────────────────────────────────
-function NsaTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading: boolean }) {
+function NsaTicketTable({ tickets, loading, preview }: { tickets: PbiTicket[]; loading: boolean; preview: boolean }) {
   const cols = ["Site ID","Chain","District","Site Label","TT Severity","Total Duration","Time to SLA Breach","Remaining SAL (MIN)","Problem Description"];
   const empty = !loading && tickets.length === 0;
   return (
@@ -505,7 +507,7 @@ function NsaTicketTable({ tickets, loading }: { tickets: PbiTicket[]; loading: b
       {loading
         ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: "rgba(255,255,255,0.4)", fontSize: 12, padding: 14 }}>Loading…</td></tr>
         : empty
-          ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 8, fontWeight: 600 }}>✓ No active NSA tickets</td></tr>
+          ? <tr><td colSpan={cols.length} style={{ textAlign: "center", color: P.green, fontSize: 12, padding: 8, fontWeight: 600 }}>{preview ? "No data connected" : "✓ No active NSA tickets"}</td></tr>
           : tickets.map((t, i) => <NsaTicketRow key={`${t.id}-${i}`} ticket={t} idx={i} />)}
     </TableShell>
   );
@@ -516,7 +518,7 @@ const avail = (on: number, tot: number) => tot ? Math.round((on / tot) * 1000) /
 const dotC  = (v: number)               => v >= 95 ? P.green : v >= 80 ? P.orange : P.red;
 
 // ─── Main dashboard ───────────────────────────────────────────────────────────
-export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults") => void }) {
+export default function Dashboard({ onNavigate, preview = false }: { onNavigate?: (page: "faults") => void; preview?: boolean }) {
   const [statusFilter, setStatusFilter] = useState("Open");
   const [cowIdFilter,  setCowIdFilter]  = useState("All");
   const [areaFilter,   setAreaFilter]   = useState<string | null>(null);
@@ -525,10 +527,10 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults"
   const dateStr = clock.toLocaleDateString("en-GB",  { day: "2-digit", month: "short", year: "numeric" });
   const timeStr = clock.toLocaleTimeString("en-GB",  { hour: "2-digit", minute: "2-digit", second: "2-digit" });
 
-  const { data: pbiSites,   loading: sitesLoading }   = usePbi<PbiSite[]>("/pbi/sites",           60_000);
-  const { data: powerTix,   loading: powerLoading }   = usePbi<PbiTicket[]>("/pbi/tickets/power",  60_000);
-  const { data: telecomTix, loading: telecomLoading } = usePbi<PbiTicket[]>("/pbi/tickets/telecom", 60_000);
-  const { data: kpis }                                = usePbi<PbiKpis>("/pbi/kpis",              60_000);
+  const { data: pbiSites,   loading: sitesLoading }   = usePbi<PbiSite[]>("/pbi/sites",           60_000, !preview);
+  const { data: powerTix,   loading: powerLoading }   = usePbi<PbiTicket[]>("/pbi/tickets/power",  60_000, !preview);
+  const { data: telecomTix, loading: telecomLoading } = usePbi<PbiTicket[]>("/pbi/tickets/telecom", 60_000, !preview);
+  const { data: kpis }                                = usePbi<PbiKpis>("/pbi/kpis",              60_000, !preview);
 
   // ── Area-filtered sites ────────────────────────────────────────────────────
   const areaSites = useMemo(() => {
@@ -547,7 +549,7 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults"
 
   // ── Availability — always computed from sites data (PMP-Status-aware) ────
   const areaAvail = useMemo(() => {
-    if (areaSites.length === 0) return 100;
+    if (areaSites.length === 0) return 0;
     const on = areaSites.filter(s => s.status === "operational").length;
     return Math.round((on / areaSites.length) * 1000) / 10;
   }, [areaSites]);
@@ -578,7 +580,7 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults"
   }, [areaSites, cowIdFilter, powerTix, telecomTix]);
 
   // ── Real-time risk cards via SSE ──────────────────────────────────────────
-  const riskCards = useRiskCards();
+  const riskCards = useRiskCards(!preview);
 
   // ── Ticket filtering (area + status) ──────────────────────────────────────
   const areaNames = useMemo(() => new Set(areaSites.map(s => s.name)), [areaSites]);
@@ -591,17 +593,17 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults"
 
   // ── Ticker ─────────────────────────────────────────────────────────────────
   const tickerItems = [
-    { label: "Hajj Overall", val: areaAvail },
-    ...areaRows.map(z => ({ label: z.label, val: avail(z.onAir, z.total) })),
+    { label: "Hajj Overall", val: areaSites.length ? areaAvail : null },
+    ...areaRows.map(z => ({ label: z.label, val: z.total ? avail(z.onAir, z.total) : null })),
   ];
   const sep = <span style={{ margin: "0 16px", opacity: 0.25 }}>|</span>;
   const mkTicker = (pfx: string) => tickerItems.map(({ label, val }, i) => (
     <span key={`${pfx}-${i}`} style={{ display: "inline-flex", alignItems: "center", gap: 6, whiteSpace: "nowrap" }}>
-      <span style={{ width: 7, height: 7, borderRadius: "50%", background: dotC(val),
-        boxShadow: `0 0 6px ${dotC(val)}`, display: "inline-block" }} />
+      <span style={{ width: 7, height: 7, borderRadius: "50%", background: val === null ? "rgba(255,255,255,0.4)" : dotC(val),
+        boxShadow: val === null ? "none" : `0 0 6px ${dotC(val)}`, display: "inline-block" }} />
       <span style={{ fontWeight: 700, color: "#fff", fontSize: 13 }}>{label}</span>
-      <span style={{ color: dotC(val), fontWeight: 900, fontSize: 13 }}>{val.toFixed(1)}%</span>
-      <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>avail.</span>
+      <span style={{ color: val === null ? "rgba(255,255,255,0.55)" : dotC(val), fontWeight: 900, fontSize: 13 }}>{val === null ? "N/A" : `${val.toFixed(1)}%`}</span>
+      {val !== null && <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 12 }}>avail.</span>}
       {i < tickerItems.length - 1 && sep}
     </span>
   ));
@@ -654,13 +656,13 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults"
           borderRadius: 20, padding: "4px 13px" }}>
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: P.green,
             boxShadow: `0 0 8px ${P.green}`, display: "inline-block", animation: "pulse 2s infinite" }} />
-          <span style={{ color: P.green, fontSize: 13, fontWeight: 800 }}>LIVE</span>
+          <span style={{ color: P.green, fontSize: 13, fontWeight: 800 }}>{preview ? "DESIGN PREVIEW · NO LIVE DATA" : "LIVE"}</span>
         </div>
 
         <img src="/aces-logo-login.png" alt="ACES Managed Services"
           style={{ height: 48, objectFit: "contain", mixBlendMode: "screen" }} />
 
-        <button
+        {!preview && <button
           onClick={() => { sessionStorage.removeItem("cow_token"); window.location.reload(); }}
           title="Sign out"
           style={{
@@ -678,12 +680,12 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults"
             <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
           Logout
-        </button>
+        </button>}
       </div>
 
       {/* ══ MAP (full width) ══════════════════════════════════════════════════ */}
       <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
-        <Map3D sites={mapSites} areaFilter={areaFilter ?? "All"} />
+        {preview ? <div style={{ width: "100%", height: "100%", background: "radial-gradient(circle at 50% 44%, #37205d 0%, #190d37 55%, #0d0b22 100%)", display: "grid", placeItems: "center" }}><div style={{ textAlign: "center", color: "rgba(255,255,255,0.7)", padding: 24, border: "1px solid rgba(200,140,255,0.3)", borderRadius: 16, background: "rgba(20,0,42,0.62)" }}><div style={{ fontSize: 22, fontWeight: 800 }}>Site map preview</div><div style={{ fontSize: 13 }}>Site locations will appear when a data source is connected.</div></div></div> : <Map3D sites={mapSites} areaFilter={areaFilter ?? "All"} />}
 
         {/* ── Hajj + Kaaba icons — top-center map overlay ──────────────── */}
         {/* At h=140: hajj transparent-top=45px, kaaba=15px; container top=-(45-28)=-17 */}
@@ -821,7 +823,7 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults"
         <Glass style={{ position: "absolute", top: 36, right: 10, zIndex: 900,
           width: 300, padding: "6px 10px 6px",
           display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <GaugeSvg value={areaAvail} size={178} />
+          {areaSites.length ? <GaugeSvg value={areaAvail} size={178} /> : <div style={{ height: 178, width: 178, borderRadius: "50%", border: "12px solid rgba(255,255,255,0.16)", display: "grid", placeItems: "center", textAlign: "center", fontWeight: 800 }}><span>Availability<br/>N/A</span></div>}
         </Glass>
 
         {/* ── RIGHT: KPI cards (below gauge, one card each) ───────────────── */}
@@ -862,7 +864,7 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults"
             </div>
             {riskCards.length === 0 ? (
               <div style={{ fontSize: 12, color: P.green, fontWeight: 600, textAlign: "center",
-                padding: "8px 0" }}>✓ No active power alarms</div>
+                padding: "8px 0" }}>{preview ? "No data connected" : "✓ No active power alarms"}</div>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8,
                 maxHeight: "calc(100vh - 320px)", overflowY: "auto" }}>
@@ -891,8 +893,8 @@ export default function Dashboard({ onNavigate }: { onNavigate?: (page: "faults"
       {/* ══ TICKET TABLES ════════════════════════════════════════════════════ */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6,
         padding: "0 6px 6px", height: 185, flexShrink: 0, overflow: "hidden" }}>
-        <PowerTicketTable tickets={filteredTelecom} loading={telecomLoading} />
-        <NsaTicketTable   tickets={filteredPower}   loading={powerLoading} />
+        <PowerTicketTable tickets={filteredTelecom} loading={telecomLoading} preview={preview} />
+        <NsaTicketTable   tickets={filteredPower}   loading={powerLoading} preview={preview} />
       </div>
 
       <style>{`
